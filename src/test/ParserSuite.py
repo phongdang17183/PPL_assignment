@@ -3,21 +3,29 @@ from TestUtils import TestParser
 
 class ParserSuite(unittest.TestCase):
     def test_simple_program(self):
-        """Simple program: int main() {} """
-        input = """int main() {}"""
+        """Simple program: void main() {} """
+        input = """func main() {};"""
         expect = "successful"
-        self.assertTrue(TestParser.test(input,expect,201))
+        self.assertTrue(TestParser.checkParser(input,expect,201))
 
     def test_more_complex_program(self):
         """More complex program"""
-        input = """int main () {
-            putIntLn(4);
-        }"""
+        input = """func foo () {
+        };"""
         expect = "successful"
-        self.assertTrue(TestParser.test(input,expect,202))
+        self.assertTrue(TestParser.checkParser(input,expect,202))
     
     def test_wrong_miss_close(self):
-        """Miss ) int main( {}"""
-        input = """int main( {}"""
-        expect = "Error on line 1 col 10: {"
-        self.assertTrue(TestParser.test(input,expect,203))
+        """Miss ) void main( {}"""
+        input = """func main({};"""
+        expect = "Error on line 1 col 11: {"
+        self.assertTrue(TestParser.checkParser(input,expect,203))
+    def test_wrong_variable(self):
+        input = """var int;"""
+        expect = "Error on line 1 col 5: int"
+        self.assertTrue(TestParser.checkParser(input,expect,204))
+    def test_wrong_index(self):
+        input = """var i ;"""
+        expect = "Error on line 1 col 7: ;"
+        self.assertTrue(TestParser.checkParser(input,expect,205))
+    

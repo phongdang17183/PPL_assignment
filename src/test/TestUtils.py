@@ -1,29 +1,19 @@
 import sys,os
 from antlr4 import *
 from antlr4.error.ErrorListener import ConsoleErrorListener,ErrorListener
-if not './main/bkool/parser/' in sys.path:
-    sys.path.append('./main/bkool/parser/')
-if os.path.isdir('../target/main/bkool/parser') and not '../target/main/bkool/parser/' in sys.path:
-    sys.path.append('../target/main/bkool/parser/')
-from BKOOLLexer import BKOOLLexer
-from BKOOLParser import BKOOLParser
+if not './main/minigo/parser/' in sys.path:
+    sys.path.append('./main/minigo/parser/')
+if os.path.isdir('../target/main/minigo/parser') and not '../target/main/minigo/parser/' in sys.path:
+    sys.path.append('../target/main/minigo/parser/')
+from MiniGoLexer import MiniGoLexer
+from MiniGoParser import MiniGoParser
 from lexererr import *
-# from ASTGeneration import ASTGeneration
-# from StaticCheck import StaticChecker
-# from StaticError import *
-# from CodeGenerator import CodeGenerator
-import subprocess
-
-JASMIN_JAR = "./external/jasmin.jar"
-TEST_DIR = "./test/testcases/"
-SOL_DIR = "./test/solutions/"
-Lexer = BKOOLLexer
-Parser = BKOOLParser
+import difflib
 
 class TestUtil:
     @staticmethod
     def makeSource(inputStr,num):
-        filename = TEST_DIR + str(num) + ".txt"
+        filename = "./test/testcases/" + str(num) + ".txt"
         file = open(filename,"w")
         file.write(inputStr)
         file.close()
@@ -32,37 +22,46 @@ class TestUtil:
 
 class TestLexer:
     @staticmethod
-    def test(input,expect,num):
-        inputfile = TestUtil.makeSource(input,num)
-        TestLexer.check(SOL_DIR,inputfile,num)
-        dest = open(SOL_DIR + str(num) + ".txt","r")
-        line = dest.read()
-        return line == expect
-    
-    @staticmethod
-    def check(soldir,inputfile,num):
-        dest = open(os.path.join(soldir,str(num) + ".txt"),"w")
-        lexer = Lexer(inputfile)
+    def test(inputdir,outputdir,num):
+        dest = open(outputdir + "/" + str(num) + ".txt","w")
+        lexer = MiniGoLexer(FileStream(inputdir + "/" + str(num) + ".txt"))
         try:
-            TestLexer.printLexeme(dest,lexer)
+            TestLexer.printLexeme(dest,lexer,"\n")
         except (ErrorToken,UncloseString,IllegalEscape) as err:
-            dest.write(err.message)
+            dest.write(err.message+"\n")
+        except Exception as err:
+            dest.write(str(err)+"\n")
         finally:
             dest.close() 
+    @staticmethod
+    def checkLexeme(input,expect,num):
+        inputfile = TestUtil.makeSource(input,num)
+        dest = open("./test/solutions/" + str(num) + ".txt","w")
+        lexer = MiniGoLexer(inputfile)
+        try:
+            TestLexer.printLexeme(dest,lexer,",")
+        except (ErrorToken,UncloseString,IllegalEscape) as err:
+            dest.write(err.message)
+        except Exception as err:
+            dest.write(str(err)+"\n")
+        finally:
+            dest.close() 
+        dest = open("./test/solutions/" + str(num) + ".txt","r")
+        line = dest.read()
+        return line == expect
 
     @staticmethod    
-    def printLexeme(dest,lexer):
+    def printLexeme(dest,lexer,char):
         tok = lexer.nextToken()
         if tok.type != Token.EOF:
-            dest.write(tok.text+",")
-            TestLexer.printLexeme(dest,lexer)
+            dest.write(tok.text+char)
+            TestLexer.printLexeme(dest,lexer,char)
         else:
             dest.write("<EOF>")
-
 class NewErrorListener(ConsoleErrorListener):
     INSTANCE = None
     def syntaxError(self, recognizer, offendingSymbol, line, column, msg, e):
-        raise SyntaxException("Error on line "+ str(line) + " col " + str(column)+ ": " + offendingSymbol.text)
+        raise SyntaxException("Error on line "+ str(line) + " col " + str(column + 1)+ ": " + offendingSymbol.text)
 NewErrorListener.INSTANCE = NewErrorListener()
 
 class SyntaxException(Exception):
@@ -71,24 +70,39 @@ class SyntaxException(Exception):
 
 class TestParser:
     @staticmethod
+    def test(inputdir,outputdir,num):
+        dest = open(outputdir + "/" + str(num) + ".txt","w")
+        lexer = MiniGoLexer(FileStream(inputdir + "/" + str(num) + ".txt"))
+        listener = TestParser.createErrorListener()
+
+        tokens = CommonTokenStream(lexer)
+
+        parser = MiniGoParser(tokens)
+        parser.removeErrorListeners()
+        parser.addErrorListener(listener)
+        try:
+            parser.program()
+            dest.write("successful\n")
+        except SyntaxException as f:
+            dest.write(f.message + "\n")
+        except Exception as e:
+            dest.write(str(e))
+        finally:
+            dest.close()
+    @staticmethod
     def createErrorListener():
          return NewErrorListener.INSTANCE
 
     @staticmethod
-    def test(input,expect,num):
+    def checkParser(input,expect,num):
         inputfile = TestUtil.makeSource(input,num)
-        TestParser.check(SOL_DIR,inputfile,num)
-        dest = open(SOL_DIR + str(num) + ".txt","r")
-        line = dest.read()
-        return line == expect
-
-    @staticmethod
-    def check(soldir,inputfile,num):
-        dest = open(os.path.join(soldir , str(num) + ".txt"),"w")
-        lexer = Lexer(inputfile)
+        dest = open("./test/solutions/" + str(num) + ".txt","w")
+        lexer = MiniGoLexer(inputfile)
         listener = TestParser.createErrorListener()
+
         tokens = CommonTokenStream(lexer)
-        parser = Parser(tokens)
+
+        parser = MiniGoParser(tokens)
         parser.removeErrorListeners()
         parser.addErrorListener(listener)
         try:
@@ -100,97 +114,9 @@ class TestParser:
             dest.write(str(e))
         finally:
             dest.close()
-
-class TestAST:
-    @staticmethod
-    def test(input,expect,num):
-        inputfile = TestUtil.makeSource(input,num)
-        TestAST.check(SOL_DIR,inputfile,num)
-        dest = open(os.path.join(SOL_DIR,str(num) + ".txt"),"r")
+        dest = open("./test/solutions/" + str(num) + ".txt","r")
         line = dest.read()
         return line == expect
 
-    @staticmethod
-    def check(soldir,inputfile,num):
-        dest = open(os.path.join(soldir,str(num) + ".txt"),"w")
-        lexer = Lexer(inputfile)
-        tokens = CommonTokenStream(lexer)
-        parser = Parser(tokens)
-        tree = parser.program()
-        asttree = ASTGeneration().visit(tree)
-        dest.write(str(asttree))
-        dest.close()
 
-class TestChecker:
-    @staticmethod
-    def test(input,expect,num):       
-        if type(input) is str:
-            inputfile = TestUtil.makeSource(input,num)
-            lexer = Lexer(inputfile)
-            tokens = CommonTokenStream(lexer)
-            parser = Parser(tokens)
-            tree = parser.program()
-            asttree = ASTGeneration().visit(tree)
-        else:
-            inputfile = TestUtil.makeSource(str(input),num)
-            asttree = input       
-        TestChecker.check(SOL_DIR,asttree,num)
-        dest = open(os.path.join(SOL_DIR, str(num) + ".txt"),"r")
-        line = dest.read()
-        return line == expect
-
-    @staticmethod
-    def check(soldir,asttree,num):  
-        dest = open(os.path.join(soldir, str(num) + ".txt"),"w")     
-        checker = StaticChecker(asttree)
-        try:
-            res = checker.check()
-            dest.write(str(list(res)))
-        except StaticError as e:
-            dest.write(str(e))
-        finally:
-            dest.close()
-
-class TestCodeGen():
-    @staticmethod
-    def test(input, expect, num):
-        if type(input) is str:
-            inputfile = TestUtil.makeSource(input,num)
-            lexer = Lexer(inputfile)
-            tokens = CommonTokenStream(lexer)
-            parser = Parser(tokens)
-            tree = parser.program()
-            asttree = ASTGeneration().visit(tree)
-        else:
-            inputfile = TestUtil.makeSource(str(input),num)
-            asttree = input
         
-        TestCodeGen.check(SOL_DIR,asttree,num)
-        
-        dest = open(os.path.join(SOL_DIR, str(num) + ".txt"),"r")
-        line = dest.read()
-        return line == expect
-
-    @staticmethod
-    def check(soldir,asttree,num):
-        codeGen = CodeGenerator()
-        path = os.path.join(soldir, str(num))
-        if not os.path.isdir(path):
-            os.mkdir(path)
-        f = open(os.path.join(soldir, str(num) + ".txt"),"w")
-        try:
-            codeGen.gen(asttree, path)
-            
-            subprocess.call("java  -jar "+ JASMIN_JAR + " " + path + "/BKOOLClass.j",shell=True,stderr=subprocess.STDOUT)
-            
-            subprocess.run("java -cp ./lib:. BKOOLClass",shell=True, stdout = f, timeout=10)
-        except StaticError as e:
-            f.write(str(e))
-        except subprocess.TimeoutExpired:
-            f.write("Time out\n")
-        except subprocess.CalledProcessError as e:
-            raise RuntimeError("command '{}' return with error (code {}): {}".format(e.cmd, e.returncode, e.output))
-        finally:
-            f.close()
-            
-            

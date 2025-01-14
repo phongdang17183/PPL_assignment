@@ -3,11 +3,16 @@ from TestUtils import TestLexer
 
 class LexerSuite(unittest.TestCase):
       
-    def test_simple_string(self):
-        """test simple string"""
-        self.assertTrue(TestLexer.test("'Yanxi Palace - 2018'","'Yanxi Palace - 2018',<EOF>",101))
-
-    def test_complex_string(self):
-        """test complex string"""
-        self.assertTrue(TestLexer.test("'isn''t'","'isn''t',<EOF>",102))
+    def test_lower_identifier(self):
+        """test identifiers"""
+        self.assertTrue(TestLexer.checkLexeme("abc","abc,<EOF>",101))
+    
+    def test_wrong_token(self):
+        self.assertTrue(TestLexer.checkLexeme("ab?sVN","ab,ErrorToken ?",102))
+    def test_keyword_var(self):
+        """test keyword var"""
+        self.assertTrue(TestLexer.checkLexeme("var abc int ;","var,abc,int,;,<EOF>",103))
+    def test_keyword_func(self):
+        """test keyword func"""
+        self.assertTrue(TestLexer.checkLexeme("""func abc ( ) ""","""func,abc,(,),<EOF>""",104))
     

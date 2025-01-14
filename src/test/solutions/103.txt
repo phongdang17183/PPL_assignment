@@ -1,1 +1,1 @@
-aAsVN,3,<EOF>
+var,abc,int,;,<EOF>
