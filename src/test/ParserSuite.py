@@ -4,13 +4,13 @@ from TestUtils import TestParser
 class ParserSuite(unittest.TestCase):
     def test_simple_program(self):
         """Simple program: void main() {} """
-        input = """func main() {};"""
+        input = """func main() {x := 1;};"""
         expect = "successful"
         self.assertTrue(TestParser.checkParser(input,expect,201))
 
     def test_more_complex_program(self):
         """More complex program"""
-        input = """func foo () {
+        input = """func foo () {x:=1;
         };"""
         expect = "successful"
         self.assertTrue(TestParser.checkParser(input,expect,202))
@@ -28,4 +28,9 @@ class ParserSuite(unittest.TestCase):
         input = """var i ;"""
         expect = "Error on line 1 col 7: ;"
         self.assertTrue(TestParser.checkParser(input,expect,205))
+        
+    def test206(self):
+        input = """const Votien = [5][0]string{1, \"string\"};"""
+        expect = "successful"
+        self.assertTrue(TestParser.checkParser(input,expect,206))
     
