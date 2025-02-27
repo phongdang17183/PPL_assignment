@@ -30,7 +30,7 @@ program: list_decl EOF;
 
 list_stmt: list_stmt stmt | stmt | ;
 
-list_decl: list_decl declared_stmt SEMICOLON| declared_stmt SEMICOLON;
+list_decl: list_decl declared_stmt SEMICOLON | declared_stmt SEMICOLON;
 
 stmt:
 	(
@@ -95,25 +95,25 @@ functionCall_stmt:
 //specialCall_stmt: getInt | putInt | putIntLn | getFloat | putFloat | putFloatLn | getBool | putBool | putBoolLn | getString | putString | putStringLn | putLn ;
 methodCall_stmt: methodCall L_PAREN list_expr? R_PAREN;
 methodCall:
-    methodCall ( L_BRACKET expr R_BRACKET  |L_PAREN list_expr? R_PAREN | DOT validCall)
+    methodCall ( L_BRACKET expr R_BRACKET  | L_PAREN list_expr? R_PAREN | DOT validCall)
     | ID;
 
 return_stmt: RETURN expr | RETURN;
 
 //  special funtion
- getInt : GETINT L_PAREN R_PAREN ;
- putInt : PUTINT L_PAREN expr R_PAREN ;
- putIntLn: PUTINTLN L_PAREN expr R_PAREN ;
- getFloat : GETFLOAT L_PAREN R_PAREN ;
- putFloat : PUTFLOAT L_PAREN expr R_PAREN ;
- putFloatLn : PUTFLOATLN L_PAREN expr R_PAREN ;
- getBool : GETBOOL L_PAREN R_PAREN ;
- putBool : PUTBOOL L_PAREN expr R_PAREN ;
- putBoolLn : PUTBOOLLN L_PAREN expr R_PAREN ;
- getString : GETSTRING L_PAREN R_PAREN ;
- putString : PUTSTRING L_PAREN expr R_PAREN ;
- putStringLn: PUTSTRINGLN L_PAREN expr R_PAREN ;
- putLn : PUTLN L_PAREN R_PAREN ;
+getInt : GETINT L_PAREN R_PAREN ;
+putInt : PUTINT L_PAREN expr R_PAREN ;
+putIntLn: PUTINTLN L_PAREN expr R_PAREN ;
+getFloat : GETFLOAT L_PAREN R_PAREN ;
+putFloat : PUTFLOAT L_PAREN expr R_PAREN ;
+putFloatLn : PUTFLOATLN L_PAREN expr R_PAREN ;
+getBool : GETBOOL L_PAREN R_PAREN ;
+putBool : PUTBOOL L_PAREN expr R_PAREN ;
+putBoolLn : PUTBOOLLN L_PAREN expr R_PAREN ;
+getString : GETSTRING L_PAREN R_PAREN ;
+putString : PUTSTRING L_PAREN expr R_PAREN ;
+putStringLn: PUTSTRINGLN L_PAREN expr R_PAREN ;
+putLn : PUTLN L_PAREN R_PAREN ;
 
 // --------------------------------------------------------Declared statement--------------------------------------------------//
 declared_stmt:
@@ -332,23 +332,23 @@ BLOCK_COMMENT:
 fragment NESTED_COMMENT:
 	'/*' (NESTED_COMMENT | ~[*] | '*' ~[/])* '*/';
 
-NL:
-	'\n' {
-allowed_prev = [
-    MiniGoLexer.ID,
-    MiniGoLexer.INT_LIT, MiniGoLexer.FLOAT_LIT, MiniGoLexer.BOOLEAN_LIT, MiniGoLexer.STRING_LIT,
-    MiniGoLexer.INT, MiniGoLexer.FLOAT, MiniGoLexer.NIL_LIT, MiniGoLexer.STRING,
-    MiniGoLexer.RETURN, MiniGoLexer.CONTINUE, MiniGoLexer.BREAK,
-    MiniGoLexer.R_PAREN, MiniGoLexer.R_BRACKET, MiniGoLexer.R_BRACE
-]
-if self.lastToken is not None and self.lastToken.type in allowed_prev:
-    self.type = self.SEMICOLON
-    self.text = ";"
-    return self.emit()
-else:
-    self.skip()
-};
-
+//NL:
+//	'\n' {
+//allowed_prev = [
+//    MiniGoLexer.ID,
+//    MiniGoLexer.INT_LIT, MiniGoLexer.FLOAT_LIT, MiniGoLexer.BOOLEAN_LIT, MiniGoLexer.STRING_LIT,
+//    MiniGoLexer.INT, MiniGoLexer.FLOAT, MiniGoLexer.NIL_LIT, MiniGoLexer.STRING,
+//    MiniGoLexer.RETURN, MiniGoLexer.CONTINUE, MiniGoLexer.BREAK,
+//    MiniGoLexer.R_PAREN, MiniGoLexer.R_BRACKET, MiniGoLexer.R_BRACE
+//]
+//if self.lastToken is not None and self.lastToken.type in allowed_prev:
+//    self.type = self.SEMICOLON
+//    self.text = ";"
+//    return self.emit()
+//else:
+//    self.skip()
+//};
+NL: '\n' ->skip;
 
 WS: [ \t\r\f]+ -> skip; // skip spaces, tabs
 
