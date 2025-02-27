@@ -185,7 +185,7 @@ class ASTGeneration(MiniGoVisitor):
     # Grammar: list_methodInterface: list_methodInterface methodInterface | methodInterface;
     def visitList_methodInterface(self, ctx: MiniGoParser.List_methodInterfaceContext):
         if ctx.list_methodInterface():
-            left_methods = self.visit(ctx.list_methodInterface)
+            left_methods = self.visit(ctx.list_methodInterface())
             right_method = self.visit(ctx.methodInterface())
             return left_methods + [right_method]
         else:
@@ -197,6 +197,9 @@ class ASTGeneration(MiniGoVisitor):
     def visitMethodInterface(self, ctx: MiniGoParser.MethodInterfaceContext):
         methodName = ctx.ID().getText()
         params = self.visit(ctx.list_parameter()) if ctx.list_parameter() else []
+        if params != []:
+            params = [param.parType for param in params]
+            
         if ctx.atomictype():
             retType = self.visit(ctx.atomictype())
         elif ctx.arraytype():
@@ -233,19 +236,15 @@ class ASTGeneration(MiniGoVisitor):
     def visitArraytype1(self, ctx: MiniGoParser.Arraytype1Context):
         if ctx.arraytype1():
             left = self.visit(ctx.arraytype1())
-            try:
-                right = int(ctx.INT_LIT().getText())
-                return left + [IntLiteral(right)]
-            except ValueError:
-                right = ctx.ID().getText()
-                return left + [Id(right)]
+            if ctx.INT_LIT():
+                return left + [IntLiteral(int(ctx.INT_LIT().getText()))]
+            else:
+                return left + [Id(ctx.ID().getText())]
         else:
-            try:
-                right = int(ctx.INT_LIT().getText())
-                return [IntLiteral(right)]
-            except ValueError:
-                right = ctx.ID().getText()
-                return [Id(right)]
+            if ctx.INT_LIT():
+                return [IntLiteral(int(ctx.INT_LIT().getText()))]
+            else:
+                return [Id(ctx.ID().getText())]
     # --------------------------------------------------------------------------------
     
     # Grammar: list_stmt: list_stmt stmt | stmt | ;
@@ -326,10 +325,10 @@ class ASTGeneration(MiniGoVisitor):
             cur_if = else_if_part.elseStmt
             last_if = else_if_part
             while isinstance(cur_if, If):
-                cur_if = cur_if.elseStmt
                 last_if = cur_if
+                cur_if = cur_if.elseStmt
             
-            if last_if.elseStmt is None:    
+            if last_if.elseStmt is None :
                 last_if.elseStmt = else_part
             return If(condition, then_block, else_if_part)
     
@@ -341,10 +340,10 @@ class ASTGeneration(MiniGoVisitor):
             return None
         else:
             # Nếu có, ta xây dựng một node If cho lần đầu tiên và lồng dần nếu còn nhiều hơn
-            nested = self.visit(ctx.else_if_stmt()) if ctx.else_if_stmt() is not None else None
             condition = self.visit(ctx.expr())
             then_block = Block(self.visit(ctx.list_stmt()))
-            return If(condition, then_block, nested)
+            else_if_part = self.visit(ctx.else_if_stmt())
+            return If(condition, then_block, else_if_part)
     
     # Grammar: 
     # else_stmt: ELSE L_BRACE list_stmt R_BRACE | ;
@@ -359,8 +358,8 @@ class ASTGeneration(MiniGoVisitor):
     #   FOR expr L_BRACE list_stmt R_BRACE
     # | FOR assignment_stmt SEMICOLON expr SEMICOLON assignment_stmt L_BRACE list_stmt R_BRACE
     # | FOR vardecl SEMICOLON expr SEMICOLON assignment_stmt L_BRACE list_stmt R_BRACE
-    # | FOR ID COMMA ID DECLARE_ASSIGN RANGE ID L_BRACE list_stmt R_BRACE
-    # | FOR '_' COMMA ID DECLARE_ASSIGN RANGE ID L_BRACE list_stmt R_BRACE;
+    # | FOR ID COMMA ID DECLARE_ASSIGN RANGE expr L_BRACE list_stmt R_BRACE
+    # | FOR '_' COMMA ID DECLARE_ASSIGN RANGE expr L_BRACE list_stmt R_BRACE;
     def visitLoop_stmt(self, ctx: MiniGoParser.Loop_stmtContext):
         # Nếu chỉ có expr L_BRACE list_stmt R_BRACE -> ForBasic
         
@@ -375,11 +374,18 @@ class ASTGeneration(MiniGoVisitor):
             update = self.visit(ctx.assignment_stmt(1))
             loop_block = Block(self.visit(ctx.list_stmt()))
             return ForStep(init, cond, update, loop_block)
-        # Nếu có dạng foreach: FOR ID COMMA ID DECLARE_ASSIGN RANGE ID L_BRACE list_stmt R_BRACE
+        # Nếu có cấu trúc: vardecl ; expr ; assignment_stmt
+        elif ctx.vardecl() is not None:
+            init = self.visit(ctx.vardecl())
+            cond = self.visit(ctx.expr())
+            update = self.visit(ctx.assignment_stmt(0))
+            loop_block = Block(self.visit(ctx.list_stmt()))
+            return ForStep(init, cond, update, loop_block)
+        # Nếu có dạng foreach: FOR ID COMMA ID DECLARE_ASSIGN RANGE expr L_BRACE list_stmt R_BRACE
         else:
             # Giả sử các token ID xuất hiện theo thứ tự: [idx, value, arrayID]
             ids = ctx.ID()
-            if len(ids) == 3:
+            if len(ids) == 2:
                 idx = Id(ids[0].getText())
                 value = Id(ids[1].getText())
             else:
@@ -387,7 +393,7 @@ class ASTGeneration(MiniGoVisitor):
                 idx = Id("_")
                 value = Id(ids[0].getText())
             
-            arr = Id(ids[-1].getText())
+            arr = self.visit(ctx.expr())
             loop_block = Block(self.visit(ctx.list_stmt()))
             return ForEach(idx, value, arr, loop_block)
     
@@ -409,47 +415,47 @@ class ASTGeneration(MiniGoVisitor):
     # Grammar: 
     # methodCall_stmt: methodCall L_PAREN list_expr? R_PAREN;
     def visitMethodCall_stmt(self, ctx: MiniGoParser.MethodCall_stmtContext):
-        # Gọi visit cho rule methodCall để xử lý phần receiver và tên method
         meth = self.visit(ctx.methodCall())
         args = self.visit(ctx.list_expr()) if ctx.list_expr() is not None else []
-        # Giả sử visitMethodCall trả về tuple (receiver, metName)
-        if isinstance(meth, tuple):
-            receiver, metName = meth
+        if isinstance(meth, ArrayCell):
+            receiver = meth.arr
+            return MethCall(receiver, "", args)
+        elif isinstance(meth, FieldAccess):
+            receiver = meth.receiver
+            metName = meth.field
             return MethCall(receiver, metName, args)
-        else:
-            # Nếu chỉ trả về ID, giả định không có receiver rõ ràng
-            return MethCall(Id(""), meth, args)
+        elif isinstance(meth, MethCall):
+            receiver = meth.receiver
+            metName = meth.funName
+            return MethCall(receiver, metName, args)
+          
         
     # Grammar: 
     # methodCall:
-    #    methodCall ( L_BRACKET expr R_BRACKET  | L_PAREN list_expr? R_PAREN | DOT validCall)
+    #    methodCall ( L_BRACKET expr R_BRACKET | DOT validCall)
     #    | ID;
     def visitMethodCall(self, ctx: MiniGoParser.MethodCallContext):
-        # Nếu chỉ có một con, nghĩa là chỉ là ID
         if ctx.getChildCount() == 1:
             return Id(ctx.ID().getText())
         else:
-            # Nếu có dấu chấm: methodCall DOT validCall
-            if ctx.DOT():
-                receiver = self.visit(ctx.methodCall())
-                valid = self.visit(ctx.validCall())
-                # Nếu valid trả về một Id thì lấy tên của nó
-                if isinstance(valid, Id):
-                    return (receiver, valid.name)
-                else:
-                    return (receiver, valid)
-            # Nếu có dấu mở ngoặc: methodCall L_PAREN list_expr? R_PAREN
-            elif ctx.L_PAREN():
-                # Ở đây, ta giải nghĩa rằng phương thức được gọi trên base (receiver)
-                # Và lời gọi này sẽ được xử lý ở visitMethodCall_stmt (xem bên dưới)
-                return self.visit(ctx.methodCall())
-            # Nếu có dấu mở ngoặc vuông: methodCall L_BRACKET expr R_BRACKET
-            elif ctx.L_BRACKET():
-                base = self.visit(ctx.methodCall())
+            left = self.visit(ctx.methodCall())
+            if ctx.L_BRACKET():
+                # Truy cập mảng: methodCall [ expr ]
+                
                 index = self.visit(ctx.expr())
-                return ArrayCell(base, [index])
-            else:
-                return self.visitChildren(ctx)
+                if isinstance(left, ArrayCell):
+                    return ArrayCell(left.arr,left.idx + [index])
+                else:
+                    return ArrayCell(left, [index])
+            elif ctx.DOT():
+                # Truy cập thuộc tính: lhs . validCall
+                field = self.visit(ctx.validCall())
+                if isinstance(field, Id):
+                    return FieldAccess(left, field.name)
+                elif isinstance(field, FuncCall):
+                    return MethCall(left, field.funName, field.args)
+        
+        
     
     # Grammar: validCall: functionCall_stmt | ID;
     def visitValidCall(self, ctx: MiniGoParser.ValidCallContext):
@@ -477,9 +483,13 @@ class ASTGeneration(MiniGoVisitor):
         # Nếu có cú pháp: lhs L_BRACKET expr R_BRACKET -> ArrayCell
         if ctx.L_BRACKET():
             # Gọi đệ quy để lấy phần lhs ban đầu
-            arr = self.visit(ctx.lhs())
+            left = self.visit(ctx.lhs())
             index = self.visit(ctx.expr())
-            return ArrayCell(arr, [index])
+            if isinstance(left, ArrayCell):
+                return ArrayCell(left.arr,left.idx + [index])
+            else:
+                return ArrayCell(left, [index])
+            
         # Nếu có cú pháp: lhs DOT ID -> FieldAccess
         if ctx.DOT():
             receiver = self.visit(ctx.lhs())
@@ -566,17 +576,23 @@ class ASTGeneration(MiniGoVisitor):
             if ctx.L_BRACKET():
                 # Truy cập mảng: lhs [ expr ]
                 index = self.visit(ctx.expr())
-                return ArrayCell(left, [index])
+                
+                if isinstance(left, ArrayCell):
+                    return ArrayCell(left.arr,left.idx + [index])
+                else:
+                    return ArrayCell(left, [index])
+                    
             elif ctx.DOT():
                 # Truy cập thuộc tính: lhs . validCall
                 field = self.visit(ctx.validCall())
-                # Nếu validCall trả về chuỗi (tên trường) thì sử dụng trực tiếp
-                if isinstance(field, str):
-                    return FieldAccess(left, field)
-                else:
+                if isinstance(field, Id):
                     return FieldAccess(left, field.name)
-            else:
-                return left
+                elif isinstance(field, FuncCall):
+                    return MethCall(left, field.funName, field.args)
+                
+               
+                # elif isinstance(field, Struc):
+            
     
     # Grammar: expr7:
     #    ID
@@ -646,7 +662,12 @@ class ASTGeneration(MiniGoVisitor):
     
     # Grammar: arrayElement: ID | literal | arraylit | ID struct;
     def visitArrayElement(self, ctx: MiniGoParser.ArrayElementContext):
-        return self.visit(ctx.getChild(0))
+        if ctx.struct():
+            name = ctx.ID().getText()
+            elements = self.visit(ctx.struct())
+            return StructLiteral(name,elements)
+        else:
+            return self.visit(ctx.getChild(0))
     
     # Grammar: struct: L_BRACE list_struct_field? R_BRACE;
     def visitStruct(self, ctx: MiniGoParser.StructContext):

@@ -77,7 +77,7 @@ lhs:
 
 if_stmt: (IF L_PAREN expr R_PAREN L_BRACE list_stmt R_BRACE) else_if_stmt else_stmt;
 else_if_stmt:
-	else_if_stmt ELSE IF expr L_BRACE list_stmt R_BRACE
+	ELSE IF expr L_BRACE list_stmt R_BRACE else_if_stmt
 	|;
 else_stmt: ELSE L_BRACE list_stmt R_BRACE |;
 
@@ -85,8 +85,8 @@ loop_stmt:
 	FOR expr L_BRACE list_stmt R_BRACE
 	| FOR assignment_stmt SEMICOLON expr SEMICOLON assignment_stmt L_BRACE list_stmt R_BRACE
 	| FOR vardecl SEMICOLON expr SEMICOLON assignment_stmt L_BRACE list_stmt R_BRACE
-	| FOR ID COMMA ID DECLARE_ASSIGN RANGE ID L_BRACE list_stmt R_BRACE
-	| FOR '_' COMMA ID DECLARE_ASSIGN RANGE ID L_BRACE list_stmt R_BRACE;
+	| FOR ID COMMA ID DECLARE_ASSIGN RANGE expr L_BRACE list_stmt R_BRACE
+	| FOR '_' COMMA ID DECLARE_ASSIGN RANGE expr L_BRACE list_stmt R_BRACE;
 break_stmt: BREAK;
 continue_stmt: CONTINUE;
 functionCall_stmt:
@@ -332,23 +332,23 @@ BLOCK_COMMENT:
 fragment NESTED_COMMENT:
 	'/*' (NESTED_COMMENT | ~[*] | '*' ~[/])* '*/';
 
-//NL:
-//	'\n' {
-//allowed_prev = [
-//    MiniGoLexer.ID,
-//    MiniGoLexer.INT_LIT, MiniGoLexer.FLOAT_LIT, MiniGoLexer.BOOLEAN_LIT, MiniGoLexer.STRING_LIT,
-//    MiniGoLexer.INT, MiniGoLexer.FLOAT, MiniGoLexer.NIL_LIT, MiniGoLexer.STRING,
-//    MiniGoLexer.RETURN, MiniGoLexer.CONTINUE, MiniGoLexer.BREAK,
-//    MiniGoLexer.R_PAREN, MiniGoLexer.R_BRACKET, MiniGoLexer.R_BRACE
-//]
-//if self.lastToken is not None and self.lastToken.type in allowed_prev:
-//    self.type = self.SEMICOLON
-//    self.text = ";"
-//    return self.emit()
-//else:
-//    self.skip()
-//};
-NL: '\n' ->skip;
+NL:
+	'\n' {
+allowed_prev = [
+   MiniGoLexer.ID,
+   MiniGoLexer.INT_LIT, MiniGoLexer.FLOAT_LIT, MiniGoLexer.BOOLEAN_LIT, MiniGoLexer.STRING_LIT,
+   MiniGoLexer.INT, MiniGoLexer.FLOAT, MiniGoLexer.NIL_LIT, MiniGoLexer.STRING,
+   MiniGoLexer.RETURN, MiniGoLexer.CONTINUE, MiniGoLexer.BREAK,
+   MiniGoLexer.R_PAREN, MiniGoLexer.R_BRACKET, MiniGoLexer.R_BRACE
+]
+if self.lastToken is not None and self.lastToken.type in allowed_prev:
+   self.type = self.SEMICOLON
+   self.text = ";"
+   return self.emit()
+else:
+   self.skip()
+};
+// NL: '\n' ->skip;
 
 WS: [ \t\r\f]+ -> skip; // skip spaces, tabs
 
