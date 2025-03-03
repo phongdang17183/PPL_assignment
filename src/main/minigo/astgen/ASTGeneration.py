@@ -3,13 +3,13 @@ from MiniGoParser import MiniGoParser
 from AST import *
 
 class ASTGeneration(MiniGoVisitor):
-     # Grammar: program: list_decl EOF;
+     # program: list_decl EOF;
     def visitProgram(self, ctx: MiniGoParser.ProgramContext):
         # Gọi visit cho rule list_decl và tạo node Program
         decls = self.visit(ctx.list_decl())
         return Program(decls)
     
-    # Grammar: list_decl: list_decl declared_stmt SEMICOLON | declared_stmt SEMICOLON;
+    # list_decl: list_decl declared_stmt SEMICOLON | declared_stmt SEMICOLON;
     def visitList_decl(self, ctx: MiniGoParser.List_declContext):
         if ctx.list_decl():
             # list_decl declared_stmt SEMICOLON
@@ -18,7 +18,7 @@ class ASTGeneration(MiniGoVisitor):
             # declared_stmt SEMICOLON
             return [self.visit(ctx.declared_stmt())]
     
-    # Grammar: declared_stmt: vardecl | constdecl | structdecl | funcdecl | methoddecl | interfacedecl;
+    # declared_stmt: vardecl | constdecl | structdecl | funcdecl | methoddecl | interfacedecl;
     def visitDeclared_stmt(self, ctx: MiniGoParser.Declared_stmtContext):
         if ctx.vardecl():
             return self.visit(ctx.vardecl())
@@ -35,14 +35,14 @@ class ASTGeneration(MiniGoVisitor):
         else:
             return None
 
-    # Grammar: vardecl: vardecl1 | vardecl2;
+    # vardecl: vardecl1 | vardecl2;
     def visitVardecl(self, ctx: MiniGoParser.VardeclContext):
         if ctx.vardecl1():
             return self.visit(ctx.vardecl1())
         else:
             return self.visit(ctx.vardecl2())
     
-    # Grammar: vardecl1: VAR ID (atomictype | arraytype)? ASSIGN expr;
+    # vardecl1: VAR ID (atomictype | arraytype)? ASSIGN expr;
     def visitVardecl1(self, ctx: MiniGoParser.Vardecl1Context):
         varName = ctx.ID().getText()
         # Xử lý kiểu của biến nếu có (atomictype hoặc arraytype)
@@ -52,11 +52,11 @@ class ASTGeneration(MiniGoVisitor):
             varType = self.visit(ctx.arraytype())
         else:
             varType = None
-        # Xử lý biểu thức khởi tạo
+       
         varInit = self.visit(ctx.expr())
         return VarDecl(varName, varType, varInit)
     
-    # Grammar: vardecl2: VAR ID (atomictype | arraytype);
+    # vardecl2: VAR ID (atomictype | arraytype);
     def visitVardecl2(self, ctx: MiniGoParser.Vardecl2Context):
         varName = ctx.ID().getText()
         # Xử lý kiểu của biến nếu có
@@ -66,24 +66,24 @@ class ASTGeneration(MiniGoVisitor):
             varType = self.visit(ctx.arraytype())
         else:
             varType = None
-        # Không có biểu thức khởi tạo
+       
         return VarDecl(varName, varType, None)
     
-    # Grammar: constdecl: CONST ID ASSIGN expr;
+    # constdecl: CONST ID ASSIGN expr;
     def visitConstdecl(self, ctx: MiniGoParser.ConstdeclContext):
         conName = ctx.ID().getText()
         iniExpr = self.visit(ctx.expr())
-        # Ở đây chưa có khai báo kiểu cho hằng, đặt conType là None
+        
         return ConstDecl(conName, None, iniExpr)
  
-    # Grammar: structdecl: TYPE ID STRUCT L_BRACE list_field R_BRACE;
+    # structdecl: TYPE ID STRUCT L_BRACE list_field R_BRACE;
     def visitStructdecl(self, ctx: MiniGoParser.StructdeclContext):
         structName = ctx.ID().getText()
         fields = self.visit(ctx.list_field())
-        # Chưa xử lý phần method của struct, truyền danh sách rỗng
+        
         return StructType(structName, fields, [])
     
-    # Grammar: list_field: list_field field | field;
+    # list_field: list_field field | field;
     def visitList_field(self, ctx: MiniGoParser.List_fieldContext):
     # Nếu có con list_field, tức alternative: list_field field
         if ctx.list_field():
@@ -91,10 +91,10 @@ class ASTGeneration(MiniGoVisitor):
             current_field = self.visit(ctx.field())
             return left_fields + [current_field]
         else:
-            # Alternative chỉ có field
+            
             return [self.visit(ctx.field())]
     
-    # Grammar: field: ID (atomictype | arraytype) SEMICOLON;
+    # field: ID (atomictype | arraytype) SEMICOLON;
     def visitField(self, ctx: MiniGoParser.FieldContext):
         fieldName = ctx.ID().getText()
         if ctx.atomictype():
@@ -105,7 +105,7 @@ class ASTGeneration(MiniGoVisitor):
             fieldType = None
         return (fieldName, fieldType)
     
-    # Grammar: funcdecl: FUNC ID L_PAREN list_parameter R_PAREN (atomictype | arraytype)? L_BRACE list_stmt R_BRACE;
+    # funcdecl: FUNC ID L_PAREN list_parameter R_PAREN (atomictype | arraytype)? L_BRACE list_stmt R_BRACE;
     def visitFuncdecl(self, ctx: MiniGoParser.FuncdeclContext):
         funcName = ctx.ID().getText()
         params = self.visit(ctx.list_parameter()) if ctx.list_parameter() else []
@@ -118,14 +118,14 @@ class ASTGeneration(MiniGoVisitor):
         body = Block(self.visit(ctx.list_stmt()))
         return FuncDecl(funcName, params, retType, body)
     
-    # Grammar: list_parameter: paramprime | ;
+    # list_parameter: paramprime | ;
     def visitList_parameter(self, ctx: MiniGoParser.List_parameterContext):
         if ctx.paramprime():
             return self.visit(ctx.paramprime())
         else:
             return []
     
-    # Grammar: paramprime: paramprime COMMA parameter | parameter;
+    # paramprime: paramprime COMMA parameter | parameter;
     def visitParamprime(self, ctx: MiniGoParser.ParamprimeContext):     
         # Nếu có alternative đệ quy: paramprime COMMA parameter
         if ctx.paramprime():
@@ -133,10 +133,10 @@ class ASTGeneration(MiniGoVisitor):
             current_params = self.visit(ctx.parameter())
             return left_params + current_params
         else:
-            # Alternative chỉ có parameter
+           
             return self.visit(ctx.parameter())
     
-    # Grammar: parameter: list_ID (atomictype | arraytype);
+    # parameter: list_ID (atomictype | arraytype);
     def visitParameter(self, ctx: MiniGoParser.ParameterContext):
         if ctx.atomictype():
             paramType = self.visit(ctx.atomictype())
@@ -148,7 +148,7 @@ class ASTGeneration(MiniGoVisitor):
         ids = self.visit(ctx.list_ID())
         return [ParamDecl(i, paramType) for i in ids]
     
-    # Grammar: list_ID: list_ID COMMA ID | ID;
+    # list_ID: list_ID COMMA ID | ID;
     def visitList_ID(self, ctx: MiniGoParser.List_IDContext):
         if ctx.list_ID():
             left = self.visit(ctx.list_ID())
@@ -158,7 +158,7 @@ class ASTGeneration(MiniGoVisitor):
             # Alternative chỉ có một ID
             return [ctx.ID().getText()]
     
-    # Grammar: methoddecl:
+    # methoddecl:
     # FUNC L_PAREN ID ID R_PAREN ID L_PAREN list_parameter R_PAREN (atomictype | arraytype)? L_BRACE list_stmt R_BRACE;
     def visitMethoddecl(self, ctx: MiniGoParser.MethoddeclContext):
         # ID(0): receiver name, ID(1): receiver type, ID(2): method name
@@ -176,13 +176,13 @@ class ASTGeneration(MiniGoVisitor):
         func = FuncDecl(methodName, params, retType, body)
         return MethodDecl(receiver, recType, func)
 
-    # Grammar: interfacedecl: TYPE ID INTERFACE L_BRACE list_methodInterface R_BRACE;
+    # interfacedecl: TYPE ID INTERFACE L_BRACE list_methodInterface R_BRACE;
     def visitInterfacedecl(self, ctx: MiniGoParser.InterfacedeclContext):
         interfaceName = ctx.ID().getText()
         methods = self.visit(ctx.list_methodInterface())
         return InterfaceType(interfaceName, methods)
     
-    # Grammar: list_methodInterface: list_methodInterface methodInterface | methodInterface;
+    # list_methodInterface: list_methodInterface methodInterface | methodInterface;
     def visitList_methodInterface(self, ctx: MiniGoParser.List_methodInterfaceContext):
         if ctx.list_methodInterface():
             left_methods = self.visit(ctx.list_methodInterface())
@@ -193,7 +193,7 @@ class ASTGeneration(MiniGoVisitor):
             
         
     
-    # Grammar: methodInterface: ID L_PAREN list_parameter R_PAREN (atomictype | arraytype | ) SEMICOLON;
+    # methodInterface: ID L_PAREN list_parameter R_PAREN (atomictype | arraytype | ) SEMICOLON;
     def visitMethodInterface(self, ctx: MiniGoParser.MethodInterfaceContext):
         methodName = ctx.ID().getText()
         params = self.visit(ctx.list_parameter()) if ctx.list_parameter() else []
@@ -208,7 +208,7 @@ class ASTGeneration(MiniGoVisitor):
             retType = VoidType()
         return Prototype(methodName, params, retType)
 
-    # Grammar: atomictype: INT | FLOAT | STRING | BOOLEAN | ID;
+    # atomictype: INT | FLOAT | STRING | BOOLEAN | ID;
     def visitAtomictype(self, ctx: MiniGoParser.AtomictypeContext):
         token = ctx.getText()
         if token == "int":
@@ -220,16 +220,16 @@ class ASTGeneration(MiniGoVisitor):
         elif token == "boolean":
             return BoolType()
         else:
-            # Nếu không phải các kiểu có sẵn, coi là kiểu người dùng định nghĩa
+            
             return Id(token)
     
-    # Grammar: arraytype: arraytype1 atomictype;
+    # arraytype: arraytype1 atomictype;
     def visitArraytype(self, ctx: MiniGoParser.ArraytypeContext):
         eleType = self.visit(ctx.atomictype())
         dimens = self.visit(ctx.arraytype1())
         return ArrayType(dimens, eleType)
     
-    # Grammar: 
+    # 
     # arraytype1:
     #    arraytype1 L_BRACKET (INT_LIT | ID) R_BRACKET
     #  | L_BRACKET (INT_LIT | ID) R_BRACKET;
@@ -247,7 +247,7 @@ class ASTGeneration(MiniGoVisitor):
                 return [Id(ctx.ID().getText())]
     # --------------------------------------------------------------------------------
     
-    # Grammar: list_stmt: list_stmt stmt | stmt | ;
+    # list_stmt: list_stmt stmt | stmt | ;
     def visitList_stmt(self, ctx: MiniGoParser.List_stmtContext):
         # Nếu không có con nào (empty alternative), trả về danh sách rỗng
         if ctx.getChildCount() == 0:
@@ -263,7 +263,7 @@ class ASTGeneration(MiniGoVisitor):
         else:
             return []
     
-    # Grammar: 
+    # 
     # stmt: ( declared_stmt 
     #       | assignment_stmt 
     #       | if_stmt 
@@ -274,7 +274,7 @@ class ASTGeneration(MiniGoVisitor):
     #       | methodCall_stmt 
     #       | return_stmt ) SEMICOLON;
     def visitStmt(self, ctx: MiniGoParser.StmtContext):
-        # Kiểm tra từng lựa chọn có trong stmt và gọi visit tương ứng
+       
         if ctx.declared_stmt():
             return self.visit(ctx.declared_stmt())
         elif ctx.assignment_stmt():
@@ -296,7 +296,7 @@ class ASTGeneration(MiniGoVisitor):
         else:
             return None
 
-    # Grammar: 
+    # 
     # assignment_stmt: lhs (DECLARE_ASSIGN | ADD_ASSIGN | SUB_ASSIGN | MUL_ASSIGN | DIV_ASSIGN | MOD_ASSIGN) expr;
     def visitAssignment_stmt(self, ctx: MiniGoParser.Assignment_stmtContext):
         lhs_node = self.visit(ctx.lhs())
@@ -306,12 +306,12 @@ class ASTGeneration(MiniGoVisitor):
             return Assign(lhs_node, expr_node)
         else:
             # Với các augmented assignment (+=, -=, ...), chuyển thành dạng:
-            # lhs = lhs op expr  -->  BinaryOp(op, lhs, expr)
+            # lhs = lhs op expr 
             base_op = op[0]  # Lấy ký tự đầu (vd: '+' từ "+=")
             new_rhs = BinaryOp(base_op, lhs_node, expr_node)
             return Assign(lhs_node, new_rhs)
 
-    # Grammar: 
+    # 
     # if_stmt: IF L_PAREN expr R_PAREN L_BRACE list_stmt R_BRACE else_if_stmt else_stmt;
     def visitIf_stmt(self, ctx: MiniGoParser.If_stmtContext):
         condition = self.visit(ctx.expr())
@@ -332,20 +332,19 @@ class ASTGeneration(MiniGoVisitor):
                 last_if.elseStmt = else_part
             return If(condition, then_block, else_if_part)
     
-    # Grammar: 
+    # 
     # else_if_stmt: else_if_stmt ELSE IF expr L_BRACE list_stmt R_BRACE | ;
     def visitElse_if_stmt(self, ctx: MiniGoParser.Else_if_stmtContext):
-        # Nếu không có else-if thì trả về None
+        
         if ctx.getChildCount() == 0:
             return None
         else:
-            # Nếu có, ta xây dựng một node If cho lần đầu tiên và lồng dần nếu còn nhiều hơn
             condition = self.visit(ctx.expr())
             then_block = Block(self.visit(ctx.list_stmt()))
             else_if_part = self.visit(ctx.else_if_stmt())
             return If(condition, then_block, else_if_part)
     
-    # Grammar: 
+    # 
     # else_stmt: ELSE L_BRACE list_stmt R_BRACE | ;
     def visitElse_stmt(self, ctx: MiniGoParser.Else_stmtContext):
         if ctx.getChildCount() == 0:
@@ -353,7 +352,7 @@ class ASTGeneration(MiniGoVisitor):
         else:
             return Block(self.visit(ctx.list_stmt()))
     
-    # Grammar: 
+    # 
     # loop_stmt:
     #   FOR expr L_BRACE list_stmt R_BRACE
     # | FOR assignment_stmt SEMICOLON expr SEMICOLON assignment_stmt L_BRACE list_stmt R_BRACE
@@ -397,22 +396,22 @@ class ASTGeneration(MiniGoVisitor):
             loop_block = Block(self.visit(ctx.list_stmt()))
             return ForEach(idx, value, arr, loop_block)
     
-    # Grammar: break_stmt: BREAK;
+    # break_stmt: BREAK;
     def visitBreak_stmt(self, ctx: MiniGoParser.Break_stmtContext):
         return Break()
     
-    # Grammar: continue_stmt: CONTINUE;
+    # continue_stmt: CONTINUE;
     def visitContinue_stmt(self, ctx: MiniGoParser.Continue_stmtContext):
         return Continue()
     
-    # Grammar: 
+    # 
     # functionCall_stmt: ID L_PAREN list_expr R_PAREN | ID L_PAREN R_PAREN;
     def visitFunctionCall_stmt(self, ctx: MiniGoParser.FunctionCall_stmtContext):
         funcName = ctx.ID().getText()
         args = self.visit(ctx.list_expr()) if ctx.list_expr() is not None else []
         return FuncCall(funcName, args)
     
-    # Grammar: 
+    # 
     # methodCall_stmt: methodCall L_PAREN list_expr? R_PAREN;
     def visitMethodCall_stmt(self, ctx: MiniGoParser.MethodCall_stmtContext):
         meth = self.visit(ctx.methodCall())
@@ -430,7 +429,7 @@ class ASTGeneration(MiniGoVisitor):
             return MethCall(receiver, metName, args)
           
         
-    # Grammar: 
+    # 
     # methodCall:
     #    methodCall ( L_BRACKET expr R_BRACKET | DOT validCall)
     #    | ID;
@@ -457,7 +456,7 @@ class ASTGeneration(MiniGoVisitor):
         
         
     
-    # Grammar: validCall: functionCall_stmt | ID;
+    # validCall: functionCall_stmt | ID;
     def visitValidCall(self, ctx: MiniGoParser.ValidCallContext):
         if ctx.functionCall_stmt():
             return self.visit(ctx.functionCall_stmt())
@@ -466,7 +465,7 @@ class ASTGeneration(MiniGoVisitor):
         else:
             return None
     
-    # Grammar: return_stmt: RETURN expr | RETURN;
+    # return_stmt: RETURN expr | RETURN;
     def visitReturn_stmt(self, ctx: MiniGoParser.Return_stmtContext):
         if ctx.expr():
             ret_expr = self.visit(ctx.expr())
@@ -474,7 +473,7 @@ class ASTGeneration(MiniGoVisitor):
             ret_expr = None
         return Return(ret_expr)
     
-    # Grammar: 
+    # 
     # lhs: ID | lhs L_BRACKET expr R_BRACKET | lhs DOT ID;
     def visitLhs(self, ctx: MiniGoParser.LhsContext):
         # Nếu chỉ là ID
@@ -499,7 +498,7 @@ class ASTGeneration(MiniGoVisitor):
     
     # -------------------------------------------------
     
-    # Grammar: list_expr: expr | expr COMMA list_expr;
+    # list_expr: expr | expr COMMA list_expr;
     def visitList_expr(self, ctx: MiniGoParser.List_exprContext):
         # Thu thập tất cả các biểu thức trong danh sách
         if ctx.list_expr():
@@ -509,7 +508,7 @@ class ASTGeneration(MiniGoVisitor):
         else:
             return [self.visit(ctx.expr())]
     
-    # Grammar: expr: expr OR expr1 | expr1;
+    # expr: expr OR expr1 | expr1;
     def visitExpr(self, ctx: MiniGoParser.ExprContext):
         if ctx.OR():
             # Nếu có OR, tạo BinaryOp với toán tử "||"
@@ -519,7 +518,7 @@ class ASTGeneration(MiniGoVisitor):
         else:
             return self.visit(ctx.expr1())
     
-    # Grammar: expr1: expr1 AND expr2 | expr2;
+    # expr1: expr1 AND expr2 | expr2;
     def visitExpr1(self, ctx: MiniGoParser.Expr1Context):
         if ctx.AND():
             left = self.visit(ctx.expr1())
@@ -528,7 +527,7 @@ class ASTGeneration(MiniGoVisitor):
         else:
             return self.visit(ctx.expr2())
     
-    # Grammar: expr2: expr2 (EQUAL | NOT_EQ | LESS | LESS_EQ | GREATER | GREATER_EQ) expr3 | expr3;
+    # expr2: expr2 (EQUAL | NOT_EQ | LESS | LESS_EQ | GREATER | GREATER_EQ) expr3 | expr3;
     def visitExpr2(self, ctx: MiniGoParser.Expr2Context):
         if ctx.getChildCount() == 1:
             return self.visit(ctx.expr3())
@@ -538,7 +537,7 @@ class ASTGeneration(MiniGoVisitor):
             right = self.visit(ctx.expr3())
             return BinaryOp(op, left, right)
     
-    # Grammar: expr3: expr3 (ADD | SUB) expr4 | expr4;
+    # expr3: expr3 (ADD | SUB) expr4 | expr4;
     def visitExpr3(self, ctx: MiniGoParser.Expr3Context):
         if ctx.getChildCount() == 1:
             return self.visit(ctx.expr4())
@@ -548,7 +547,7 @@ class ASTGeneration(MiniGoVisitor):
             right = self.visit(ctx.expr4())
             return BinaryOp(op, left, right)
     
-    # Grammar: expr4: expr4 (MULT | DIV | MOD) expr5 | expr5;
+    # expr4: expr4 (MULT | DIV | MOD) expr5 | expr5;
     def visitExpr4(self, ctx: MiniGoParser.Expr4Context):
         if ctx.getChildCount() == 1:
             return self.visit(ctx.expr5())
@@ -558,7 +557,7 @@ class ASTGeneration(MiniGoVisitor):
             right = self.visit(ctx.expr5())
             return BinaryOp(op, left, right)
     
-    # Grammar: expr5: (NOT | SUB) expr5 | expr6;
+    # expr5: (NOT | SUB) expr5 | expr6;
     def visitExpr5(self, ctx: MiniGoParser.Expr5Context):
         if ctx.getChildCount() == 1:
             return self.visit(ctx.expr6())
@@ -567,7 +566,7 @@ class ASTGeneration(MiniGoVisitor):
             body = self.visit(ctx.expr5())
             return UnaryOp(op, body)
     
-    # Grammar: expr6: expr6 (L_BRACKET expr R_BRACKET | DOT validCall) | expr7;
+    # expr6: expr6 (L_BRACKET expr R_BRACKET | DOT validCall) | expr7;
     def visitExpr6(self, ctx: MiniGoParser.Expr6Context):
         if ctx.getChildCount() == 1:
             return self.visit(ctx.expr7())
@@ -594,7 +593,7 @@ class ASTGeneration(MiniGoVisitor):
                 # elif isinstance(field, Struc):
             
     
-    # Grammar: expr7:
+    # expr7:
     #    ID
     #    | literal
     #    | arraytype arraylit
@@ -612,7 +611,6 @@ class ASTGeneration(MiniGoVisitor):
             # Giả sử rule: arraytype arraylit
             eleType = self.visit(ctx.arraytype())
             value = self.visit(ctx.arraylit())
-            # Để đơn giản, để danh sách dimensions rỗng
             return ArrayLiteral(eleType.dimens, eleType.eleType, value)
         elif ctx.getChild(0).getText() == "(":
             # Biểu thức trong ngoặc
@@ -629,7 +627,7 @@ class ASTGeneration(MiniGoVisitor):
         else:
             return self.visitChildren(ctx)
     
-    # Grammar: literal: INT_LIT | FLOAT_LIT | STRING_LIT | BOOLEAN_LIT | NIL_LIT;
+    # literal: INT_LIT | FLOAT_LIT | STRING_LIT | BOOLEAN_LIT | NIL_LIT;
     def visitLiteral(self, ctx: MiniGoParser.LiteralContext):
         text = ctx.getText()
         if ctx.INT_LIT():
@@ -646,12 +644,12 @@ class ASTGeneration(MiniGoVisitor):
         else:
             return None
     
-    # Grammar: arraylit: L_BRACE list_arrayElement R_BRACE;
+    # arraylit: L_BRACE list_arrayElement R_BRACE;
     def visitArraylit(self, ctx: MiniGoParser.ArraylitContext):
         # Trả về danh sách các phần tử mảng; có thể bọc trong node ArrayLiteral nếu cần
         return self.visit(ctx.list_arrayElement())
     
-    # Grammar: list_arrayElement: list_arrayElement COMMA arrayElement | arrayElement;
+    # list_arrayElement: list_arrayElement COMMA arrayElement | arrayElement;
     def visitList_arrayElement(self, ctx: MiniGoParser.List_arrayElementContext):
         if ctx.list_arrayElement():
             left = self.visit(ctx.list_arrayElement())
@@ -660,7 +658,7 @@ class ASTGeneration(MiniGoVisitor):
         else:
             return [self.visit(ctx.arrayElement())]
     
-    # Grammar: arrayElement: ID | literal | arraylit | ID struct;
+    # arrayElement: ID | literal | arraylit | ID struct;
     def visitArrayElement(self, ctx: MiniGoParser.ArrayElementContext):
         if ctx.struct():
             name = ctx.ID().getText()
@@ -669,14 +667,14 @@ class ASTGeneration(MiniGoVisitor):
         else:
             return self.visit(ctx.getChild(0))
     
-    # Grammar: struct: L_BRACE list_struct_field? R_BRACE;
+    # struct: L_BRACE list_struct_field? R_BRACE;
     def visitStruct(self, ctx: MiniGoParser.StructContext):
         if ctx.list_struct_field():
             return self.visit(ctx.list_struct_field())
         else:
             return []
     
-    # Grammar: list_struct_field: list_struct_field COMMA fieldprime | fieldprime;
+    # list_struct_field: list_struct_field COMMA fieldprime | fieldprime;
     def visitList_struct_field(self, ctx: MiniGoParser.List_struct_fieldContext):
         if ctx.list_struct_field():
             left = self.visit(ctx.list_struct_field())
@@ -685,69 +683,69 @@ class ASTGeneration(MiniGoVisitor):
         else:
             return [self.visit(ctx.fieldprime())]
     
-    # Grammar: fieldprime: ID COLON expr;
+    # fieldprime: ID COLON expr;
     def visitFieldprime(self, ctx: MiniGoParser.FieldprimeContext):
         fieldName = ctx.ID().getText()
         expr_node = self.visit(ctx.expr())
         return (fieldName, expr_node)
     
-    # Grammar: getInt : GETINT L_PAREN R_PAREN ;
+    # getInt : GETINT L_PAREN R_PAREN ;
     def visitGetInt(self, ctx: MiniGoParser.GetIntContext):
         return FuncCall("getInt", [])
     
-    # Grammar: putInt : PUTINT L_PAREN expr R_PAREN ;
+    # putInt : PUTINT L_PAREN expr R_PAREN ;
     def visitPutInt(self, ctx: MiniGoParser.PutIntContext):
         arg = self.visit(ctx.expr())
         return FuncCall("putInt", [arg])
     
-    # Grammar: putIntLn: PUTINTLN L_PAREN expr R_PAREN ;
+    # putIntLn: PUTINTLN L_PAREN expr R_PAREN ;
     def visitPutIntLn(self, ctx: MiniGoParser.PutIntLnContext):
         arg = self.visit(ctx.expr())
         return FuncCall("putIntLn", [arg])
     
-    # Grammar: getFloat : GETFLOAT L_PAREN R_PAREN ;
+    # getFloat : GETFLOAT L_PAREN R_PAREN ;
     def visitGetFloat(self, ctx: MiniGoParser.GetFloatContext):
         return FuncCall("getFloat", [])
     
-    # Grammar: putFloat : PUTFLOAT L_PAREN expr R_PAREN ;
+    # putFloat : PUTFLOAT L_PAREN expr R_PAREN ;
     def visitPutFloat(self, ctx: MiniGoParser.PutFloatContext):
         arg = self.visit(ctx.expr())
         return FuncCall("putFloat", [arg])
     
-    # Grammar: putFloatLn : PUTFLOATLN L_PAREN expr R_PAREN ;
+    # putFloatLn : PUTFLOATLN L_PAREN expr R_PAREN ;
     def visitPutFloatLn(self, ctx: MiniGoParser.PutFloatLnContext):
         arg = self.visit(ctx.expr())
         return FuncCall("putFloatLn", [arg])
     
-    # Grammar: getBool : GETBOOL L_PAREN R_PAREN ;
+    # getBool : GETBOOL L_PAREN R_PAREN ;
     def visitGetBool(self, ctx: MiniGoParser.GetBoolContext):
         return FuncCall("getBool", [])
     
-    # Grammar: putBool : PUTBOOL L_PAREN expr R_PAREN ;
+    # putBool : PUTBOOL L_PAREN expr R_PAREN ;
     def visitPutBool(self, ctx: MiniGoParser.PutBoolContext):
         arg = self.visit(ctx.expr())
         return FuncCall("putBool", [arg])
     
-    # Grammar: putBoolLn : PUTBOOLLN L_PAREN expr R_PAREN ;
+    # putBoolLn : PUTBOOLLN L_PAREN expr R_PAREN ;
     def visitPutBoolLn(self, ctx: MiniGoParser.PutBoolLnContext):
         arg = self.visit(ctx.expr())
         return FuncCall("putBoolLn", [arg])
     
-    # Grammar: getString : GETSTRING L_PAREN R_PAREN ;
+    # getString : GETSTRING L_PAREN R_PAREN ;
     def visitGetString(self, ctx: MiniGoParser.GetStringContext):
         return FuncCall("getString", [])
     
-    # Grammar: putString : PUTSTRING L_PAREN expr R_PAREN ;
+    # putString : PUTSTRING L_PAREN expr R_PAREN ;
     def visitPutString(self, ctx: MiniGoParser.PutStringContext):
         arg = self.visit(ctx.expr())
         return FuncCall("putString", [arg])
     
-    # Grammar: putStringLn: PUTSTRINGLN L_PAREN expr R_PAREN ;
+    # putStringLn: PUTSTRINGLN L_PAREN expr R_PAREN ;
     def visitPutStringLn(self, ctx: MiniGoParser.PutStringLnContext):
         arg = self.visit(ctx.expr())
         return FuncCall("putStringLn", [arg])
     
-    # Grammar: putLn : PUTLN L_PAREN R_PAREN ;
+    # putLn : PUTLN L_PAREN R_PAREN ;
     def visitPutLn(self, ctx: MiniGoParser.PutLnContext):
         return FuncCall("putLn", [])
     

@@ -335,20 +335,20 @@ fragment NESTED_COMMENT:
 NL:
 	'\n' {
 allowed_prev = [
-   MiniGoLexer.ID,
-   MiniGoLexer.INT_LIT, MiniGoLexer.FLOAT_LIT, MiniGoLexer.BOOLEAN_LIT, MiniGoLexer.STRING_LIT,
-   MiniGoLexer.INT, MiniGoLexer.FLOAT, MiniGoLexer.NIL_LIT, MiniGoLexer.STRING,
-   MiniGoLexer.RETURN, MiniGoLexer.CONTINUE, MiniGoLexer.BREAK,
-   MiniGoLexer.R_PAREN, MiniGoLexer.R_BRACKET, MiniGoLexer.R_BRACE
+  MiniGoLexer.ID,
+  MiniGoLexer.INT_LIT, MiniGoLexer.FLOAT_LIT, MiniGoLexer.BOOLEAN_LIT, MiniGoLexer.STRING_LIT,
+  MiniGoLexer.INT, MiniGoLexer.FLOAT, MiniGoLexer.NIL_LIT, MiniGoLexer.STRING,
+  MiniGoLexer.RETURN, MiniGoLexer.CONTINUE, MiniGoLexer.BREAK,
+  MiniGoLexer.R_PAREN, MiniGoLexer.R_BRACKET, MiniGoLexer.R_BRACE
 ]
 if self.lastToken is not None and self.lastToken.type in allowed_prev:
-   self.type = self.SEMICOLON
-   self.text = ";"
-   return self.emit()
+  self.type = self.SEMICOLON
+  self.text = ";"
+  return self.emit()
 else:
-   self.skip()
+  self.skip()
 };
-// NL: '\n' ->skip;
+//  NL: '\n' ->skip;
 
 WS: [ \t\r\f]+ -> skip; // skip spaces, tabs
 
