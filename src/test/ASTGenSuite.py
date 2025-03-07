@@ -227,7 +227,7 @@ class ASTGenSuite(unittest.TestCase):
                      Block([
                          VarDecl("p",
                                  Id("Person"),
-                                 StructLiteral("Person", [("name", StringLiteral("John")), ("age", IntLiteral(30))]))
+                                 StructLiteral("Person", [("name", StringLiteral("\"John\"")), ("age", IntLiteral(30))]))
                      ]))
         ]))
         self.assertTrue(TestAST.checkASTGen(input, expect, 323))
@@ -355,970 +355,917 @@ class ASTGenSuite(unittest.TestCase):
         ]))
         self.assertTrue(TestAST.checkASTGen(input, expect, 332))
 
-    def test333(self):
+    def test_chained_method_call(self):
         """Test chained method call"""
-        input = """const VoTien = foo( [1]int{1}, [1][1]int{2} ); """
-        expect = str(Program([ConstDecl("VoTien",None,FuncCall("foo",[ArrayLiteral([IntLiteral(1)],IntType(),[IntLiteral(1)]),ArrayLiteral([IntLiteral(1),IntLiteral(1)],IntType(),[IntLiteral(2)])]))]))
-
+        input = "func main() { p.foo().bar(1); };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                     Block([
+                         MethCall(MethCall(Id("p"), "foo", []), "bar", [IntLiteral(1)])
+                     ]))
+        ]))
         self.assertTrue(TestAST.checkASTGen(input, expect, 333))
-        
-    def test_1(self):
-        """Test simple function call with integer argument"""
-        input = """const VoTien = foo( 1 ); """
-        expect = str(Program([ConstDecl("VoTien", None, FuncCall("foo", [IntLiteral(1)]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 1))
-        
-    def test_2(self):
-        """Test function call with multiple literal types"""
-        input = """const VoTien = foo( 1.0, true, false, nil, "votien" ); """
-        expect = str(Program([ConstDecl("VoTien", None, FuncCall("foo", [FloatLiteral(1.0), BooleanLiteral(True), BooleanLiteral(False), NilLiteral(), StringLiteral("votien")]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 2))
-
-    def test_3(self):
-        """Test function call with identifier argument"""
-        input = """const VoTien = foo( id ); """
-        expect = str(Program([ConstDecl("VoTien", None, FuncCall("foo", [Id("id")]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 3))
-
-    def test_4(self):
-        """Test function call with complex binary and unary expressions"""
-        input = """const VoTien = foo( 1 + 2 - 3 && 5 - -1 ); """
-        expect = str(Program([ConstDecl("VoTien", None, FuncCall("foo", [BinaryOp("&&", BinaryOp("-", BinaryOp("+", IntLiteral(1), IntLiteral(2)), IntLiteral(3)), BinaryOp("-", IntLiteral(5), UnaryOp("-", IntLiteral(1))))]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 4))
-
-    def test_5(self):
-        """Test function call with chained comparison operators"""
-        input = """const VoTien = foo( a > b <= c ); """
-        expect = str(Program([ConstDecl("VoTien", None, FuncCall("foo", [BinaryOp("<=", BinaryOp(">", Id("a"), Id("b")), Id("c"))]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 5))
-
-    def test_6(self):
-        """Test function call with multi-dimensional array access"""
-        input = """const VoTien = foo( a[2][3] ); """
-        expect = str(Program([ConstDecl("VoTien", None, FuncCall("foo", [ArrayCell(Id("a"), [IntLiteral(2), IntLiteral(3)])]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 6))
-
-    def test_7(self):
-        """Test function call with nested field access"""
-        input = """const VoTien = foo( a.b.c ); """
-        expect = str(Program([ConstDecl("VoTien", None, FuncCall("foo", [FieldAccess(FieldAccess(Id("a"), "b"), "c")]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 7))
-
-    def test_8(self):
-        """Test function call with nested function and method calls"""
-        input = """const VoTien = foo( a(), b.a(2, 3) ); """
-        expect = str(Program([ConstDecl("VoTien", None, FuncCall("foo", [FuncCall("a", []), MethCall(Id("b"), "a", [IntLiteral(2), IntLiteral(3)])]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 8))
-
-    def test_9(self):
-        """Test function call with binary operation and parentheses"""
-        input = """const VoTien = foo( a * (1 + 2) ); """
-        expect = str(Program([ConstDecl("VoTien", None, FuncCall("foo", [BinaryOp("*", Id("a"), BinaryOp("+", IntLiteral(1), IntLiteral(2)))]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 9))
-
-    def test_10(self):
-        """Test function call with struct literals"""
-        input = """const VoTien = foo( Votien {}, Votien {a: 1} ); """
-        expect = str(Program([ConstDecl("VoTien", None, FuncCall("foo", [StructLiteral("Votien", []), StructLiteral("Votien", [("a", IntLiteral(1))])]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 10))
-        
-    def test_11(self):
-        """Test function call with array literals"""
-        input = """const VoTien = foo( [1]int{1}, [1][1]int{2} ); """
-        expect = str(Program([ConstDecl("VoTien", None, FuncCall("foo", [ArrayLiteral([IntLiteral(1)], IntType(), [IntLiteral(1)]), ArrayLiteral([IntLiteral(1), IntLiteral(1)], IntType(), [IntLiteral(2)])]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 11))
-
-    def test_12(self):
-        """Test multiple variable declarations"""
-        input = """
-            var Votien = 1;
-            var Votien int;
-            var Votine int = 1;
-"""
-        expect = str(Program([VarDecl("Votien", None, IntLiteral(1)), VarDecl("Votien", IntType(), None), VarDecl("Votine", IntType(), IntLiteral(1))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 12))
-
-    def test_13(self):
-        """Test function declarations with and without parameters"""
-        input = """
-            func foo() int {return;}
-            func foo(a int, b int) {return;}
-"""
-        expect = str(Program([FuncDecl("foo", [], IntType(), Block([Return(None)])), FuncDecl("foo", [ParamDecl("a", IntType()), ParamDecl("b", IntType())], VoidType(), Block([Return(None)]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 13))
-
-    def test_14(self):
-        """Test method declaration"""
-        input = """
-            func (Votien v) foo(Votien int) {return;}
-"""
-        expect = str(Program([MethodDecl("Votien", Id("v"), FuncDecl("foo", [ParamDecl("Votien", IntType())], VoidType(), Block([Return(None)])))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 14))
-
-    def test_15(self):
-        """Test struct type declaration with one field"""
-        input = """
-            type Votien struct {
-                a int;
-            }
-"""
-        expect = str(Program([StructType("Votien", [("a", IntType())], [])]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 15))
-
-    def test_16(self):
-        """Test repeated struct type declaration with one field"""
-        input = """
-            type Votien struct {
-                a int;
-            }
-"""
-        expect = str(Program([StructType("Votien", [("a", IntType())], [])]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 16))
-
-    def test_17(self):
-        """Test function with variable and constant declarations"""
-        input = """
-            func votien() {
-                var a int;
-                const a = nil;
-            }
-"""
-        expect = str(Program([FuncDecl("votien", [], VoidType(), Block([VarDecl("a", IntType(), None), ConstDecl("a", None, NilLiteral())]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 17))
-
-    def test_18(self):
-        """Test function with assignment statement"""
-        input = """
-            func votien() {
-                a += 1;
-            }
-"""
-        expect = str(Program([FuncDecl("votien", [], VoidType(), Block([Assign(Id("a"), BinaryOp("+", Id("a"), IntLiteral(1)))]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 18))
-
-    def test_19(self):
-        """Test function with break and continue statements"""
-        input = """
-            func votien() {
-                break;
-                continue;
-            }
-"""
-        expect = str(Program([FuncDecl("votien", [], VoidType(), Block([Break(), Continue()]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 19))
-
-    def test_20(self):
-        """Test function with function and method calls"""
-        input = """
-            func votien() {
-                foo(1, 2);
-                a[2].foo(1, 3);
-            }
-"""
-        expect = str(Program([FuncDecl("votien", [], VoidType(), Block([FuncCall("foo", [IntLiteral(1), IntLiteral(2)]), MethCall(ArrayCell(Id("a"), [IntLiteral(2)]), "foo", [IntLiteral(1), IntLiteral(3)])]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 20))
-        
-    def test_21(self):
-        """Test function with simple if statement"""
-        input = """
-            func votien() {
-                if(1) {return;}
-            }
-"""
-        expect = str(Program([FuncDecl("votien", [], VoidType(), Block([If(IntLiteral(1), Block([Return(None)]), None)]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 21))
-
-    def test_22(self):
-        """Test function with if-else statement"""
-        input = """
-            func votien() {
-                if(1) {
-                    a := 1;
-                } else {
-                    a := 1;
-                }
-            }
-"""
-        expect = str(Program([FuncDecl("votien", [], VoidType(), Block([If(IntLiteral(1), Block([Assign(Id("a"), IntLiteral(1))]), Block([Assign(Id("a"), IntLiteral(1))]))]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 22))
-
-    def test_23(self):
-        """Test function with nested if-else-if statements"""
-        input = """
-            func votien() {
-                if(1) { return;
-                } else if(1) {
-                    a := 1;
-                } else if(2) {
-                    a := 1;
-                }
-            }
-"""
-        expect = str(Program([FuncDecl("votien", [], VoidType(), Block([If(IntLiteral(1), Block([Return(None)]), If(IntLiteral(1), Block([Assign(Id("a"), IntLiteral(1))]), If(IntLiteral(2), Block([Assign(Id("a"), IntLiteral(1))]), None)))]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 23))
-
-    def test_24(self):
-        """Test function with basic and step for loops"""
-        input = """
-            func votien() {
-                for i < 10 {return;}
-                for var i = 0; i < 10; i += 1  {return;}
-            }
-"""
-        expect = str(Program([FuncDecl("votien", [], VoidType(), Block([ForBasic(BinaryOp("<", Id("i"), IntLiteral(10)), Block([Return(None)])), ForStep(VarDecl("i", None, IntLiteral(0)), BinaryOp("<", Id("i"), IntLiteral(10)), Assign(Id("i"), BinaryOp("+", Id("i"), IntLiteral(1))), Block([Return(None)]))]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 24))
-
-    def test_25(self):
-        """Test function with for-each loop"""
-        input = """
-            func votien() {
-                for index, value := range array[2] {return;}
-            }
-"""
-        expect = str(Program([FuncDecl("votien", [], VoidType(), Block([ForEach(Id("index"), Id("value"), ArrayCell(Id("array"), [IntLiteral(2)]), Block([Return(None)]))]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 25))
-
-    def test_26(self):
-        """Test constant with binary operations on booleans"""
-        input = """
-            const a = true + false - true;
-"""
-        expect = str(Program([ConstDecl("a", None, BinaryOp("-", BinaryOp("+", BooleanLiteral(True), BooleanLiteral(False)), BooleanLiteral(True)))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 26))
-
-    def test_27(self):
-        """Test constant with logical operations"""
-        input = """
-            const a = 1 && 2 || 3;
-"""
-        expect = str(Program([ConstDecl("a", None, BinaryOp("||", BinaryOp("&&", IntLiteral(1), IntLiteral(2)), IntLiteral(3)))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 27))
-
-    def test_28(self):
-        """Test constant with mixed arithmetic and logical operations"""
-        input = """
-            const a = 1 + 2 && 3;
-"""
-        expect = str(Program([ConstDecl("a", None, BinaryOp("&&", BinaryOp("+", IntLiteral(1), IntLiteral(2)), IntLiteral(3)))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 28))
-
-    def test_29(self):
-        """Test constant with subtraction and modulo"""
-        input = """
-            const a = 1 - 2 % 3;
-"""
-        expect = str(Program([ConstDecl("a", None, BinaryOp("-", IntLiteral(1), BinaryOp("%", IntLiteral(2), IntLiteral(3))))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 29))
-
-    def test_30(self):
-        """Test constant with unary and binary operations"""
-        input = """
-            const a = 1 + -2 - 1;
-"""
-        expect = str(Program([ConstDecl("a", None, BinaryOp("-", BinaryOp("+", IntLiteral(1), UnaryOp("-", IntLiteral(2))), IntLiteral(1)))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 30))
-
-    def test_31(self):
-        """Test constant with array literal and struct"""
-        input = """
-            const a = [1]ID{Votien{}};
-"""
-        expect = str(Program([ConstDecl("a", None, ArrayLiteral([IntLiteral(1)], Id("ID"), [StructLiteral("Votien", [])]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 31))
-
-    def test_32(self):
-        """Test constant with multi-dimensional float array literal"""
-        input = """
-            const a = [1][3]float{1.};
-"""
-        expect = str(Program([ConstDecl("a", None, ArrayLiteral([IntLiteral(1), IntLiteral(3)], FloatType(), [FloatLiteral(1.0)]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 32))
-
-    def test_33(self):
-        """Test constant with struct literal and multiple fields"""
-        input = """
-            const a = ID{a: 1, b: true};
-"""
-        expect = str(Program([ConstDecl("a", None, StructLiteral("ID", [("a", IntLiteral(1)), ("b", BooleanLiteral(True))]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 33))
-
-    def test_34(self):
-        """Test constant with struct literal containing array"""
-        input = """
-            const a = ID{a: [1]int{1}};
-"""
-        expect = str(Program([ConstDecl("a", None, StructLiteral("ID", [("a", ArrayLiteral([IntLiteral(1)], IntType(), [IntLiteral(1)]))]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 34))
-
-    def test_35(self):
-        """Test constant with struct literal and single field"""
-        input = """
-            const a = ID{b: true};
-"""
-        expect = str(Program([ConstDecl("a", None, StructLiteral("ID", [("b", BooleanLiteral(True))]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 35))
-
-    def test_36(self):
-        """Test constant with multiple logical AND operations"""
-        input = """
-            const a = 0 && 1 && 2;
-"""
-        expect = str(Program([ConstDecl("a", None, BinaryOp("&&", BinaryOp("&&", IntLiteral(0), IntLiteral(1)), IntLiteral(2)))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 36))
-
-    def test_37(self):
-        """Test constant with multiple logical OR operations"""
-        input = """
-            const a = 0 || 1 || 2;
-"""
-        expect = str(Program([ConstDecl("a", None, BinaryOp("||", BinaryOp("||", IntLiteral(0), IntLiteral(1)), IntLiteral(2)))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 37))
-
-    def test_38(self):
-        """Test constant with chained comparison operators"""
-        input = """
-            const a = 0 >= 1 <= 2;
-"""
-        expect = str(Program([ConstDecl("a", None, BinaryOp("<=", BinaryOp(">=", IntLiteral(0), IntLiteral(1)), IntLiteral(2)))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 38))
-
-    def test_39(self):
-        """Test constant with arithmetic operations"""
-        input = """
-            const a = 0 + 1 - 2;
-"""
-        expect = str(Program([ConstDecl("a", None, BinaryOp("-", BinaryOp("+", IntLiteral(0), IntLiteral(1)), IntLiteral(2)))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 39))
-
-    def test_40(self):
-        """Test constant with multiplication and division"""
-        input = """
-            const a = 0 * 1 / 2;
-"""
-        expect = str(Program([ConstDecl("a", None, BinaryOp("/", BinaryOp("*", IntLiteral(0), IntLiteral(1)), IntLiteral(2)))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 40))
-
-    def test_41(self):
-        """Test constant with nested unary operations"""
-        input = """
-            const a = !-!2;
-"""
-        expect = str(Program([ConstDecl("a", None, UnaryOp("!", UnaryOp("-", UnaryOp("!", IntLiteral(2)))))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 41))
-
-    def test_42(self):
-        """Test constant with complex expression"""
-        input = """
-            const a = 1 && 2 || 3 >= 4 + 5 * -6;
-"""
-        expect = str(Program([ConstDecl("a", None, BinaryOp("||", BinaryOp("&&", IntLiteral(1), IntLiteral(2)), BinaryOp(">=", IntLiteral(3), BinaryOp("+", IntLiteral(4), BinaryOp("*", IntLiteral(5), UnaryOp("-", IntLiteral(6)))))))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 42))
-
-    def test_43(self):
-        """Test constant with multiple comparison operators"""
-        input = """
-            const a = 1 > 2 < 3 >= 4 <= 5 == 6;
-"""
-        expect = str(Program([ConstDecl("a", None, BinaryOp("==", BinaryOp("<=", BinaryOp(">=", BinaryOp("<", BinaryOp(">", IntLiteral(1), IntLiteral(2)), IntLiteral(3)), IntLiteral(4)), IntLiteral(5)), IntLiteral(6)))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 43))
-
-    def test_44(self):
-        """Test constant with comparison and addition"""
-        input = """
-            const a = 1 >= 2 + 3;
-"""
-        expect = str(Program([ConstDecl("a", None, BinaryOp(">=", IntLiteral(1), BinaryOp("+", IntLiteral(2), IntLiteral(3))))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 44))
-
-    def test_45(self):
-        """Test constant with multi-dimensional array access"""
-        input = """
-            const a = a[1][2][3][4];
-"""
-        expect = str(Program([ConstDecl("a", None, ArrayCell(Id("a"), [IntLiteral(1), IntLiteral(2), IntLiteral(3), IntLiteral(4)]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 45))
-
-    def test_46(self):
-        """Test constant with array access using expression"""
-        input = """
-            const a = a[1 + 2];
-"""
-        expect = str(Program([ConstDecl("a", None, ArrayCell(Id("a"), [BinaryOp("+", IntLiteral(1), IntLiteral(2))]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 46))
-
-    def test_47(self):
-        """Test constant with nested field access"""
-        input = """
-            const a = a.b.c.d.e;
-"""
-        expect = str(Program([ConstDecl("a", None, FieldAccess(FieldAccess(FieldAccess(FieldAccess(Id("a"), "b"), "c"), "d"), "e"))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 47))
-
-    def test_48(self):
-        """Test constant with field access on struct literal"""
-        input = """
-            const a = ID {}.a;
-"""
-        expect = str(Program([ConstDecl("a", None, FieldAccess(StructLiteral("ID", []), "a"))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 48))
-
-    def test_49(self):
-        """Test constant with array access on struct field"""
-        input = """
-            const a = ID {}.a[2];
-"""
-        expect = str(Program([ConstDecl("a", None, ArrayCell(FieldAccess(StructLiteral("ID", []), "a"), [IntLiteral(2)]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 49))
-
-    def test_50(self):
-        """Test constant with chained method calls"""
-        input = """
-            const a = a.b().c().d();
-"""
-        expect = str(Program([ConstDecl("a", None, MethCall(MethCall(MethCall(Id("a"), "b", []), "c", []), "d", []))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 50))
-        
-    def test_51(self):
-        """Test constant with function call and method call"""
-        input = """
-            const a = a().d();
-"""
-        expect = str(Program([ConstDecl("a", None, MethCall(FuncCall("a", []), "d", []))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 51))
-
-    def test_52(self):
-        """Test constant with complex nested calls and access"""
-        input = """
-            const a = a[1].b.c()[2].d.e();
-"""
-        expect = str(Program([ConstDecl("a", None, MethCall(FieldAccess(ArrayCell(MethCall(FieldAccess(ArrayCell(Id("a"), [IntLiteral(1)]), "b"), "c", []), [IntLiteral(2)]), "d"), "e", []))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 52))
-
-    def test_53(self):
-        """Test constant with binary operation and parentheses"""
-        input = """
-            const a = a * (nil - "a");
-"""
-        expect = str(Program([ConstDecl("a", None, BinaryOp("*", Id("a"), BinaryOp("-", NilLiteral(), StringLiteral("a"))))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 53))
-
-    def test_54(self):
-        """Test constant with function calls and addition"""
-        input = """
-            const a = f() + f(1 + 2, 3.);
-"""
-        expect = str(Program([ConstDecl("a", None, BinaryOp("+", FuncCall("f", []), FuncCall("f", [BinaryOp("+", IntLiteral(1), IntLiteral(2)), FloatLiteral(3.0)])))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 54))
-
-    def test_55(self):
-        """Test constant with array access on function call"""
-        input = """
-            const a = foo()[2];
-"""
-        expect = str(Program([ConstDecl("a", None, ArrayCell(FuncCall("foo", []), [IntLiteral(2)]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 55))
-
-    def test_56(self):
-        """Test constant with simple identifier"""
-        input = """
-            const a = a;
-"""
-        expect = str(Program([ConstDecl("a", None, Id("a"))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 56))
-
-    def test_57(self):
-        """Test variable declaration with custom type"""
-        input = """
-            var a Votien = 1.;
-"""
-        expect = str(Program([VarDecl("a", Id("Votien"), FloatLiteral(1.0))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 57))
-
-    def test_58(self):
-        """Test variable declaration with multi-dimensional array type"""
-        input = """
-            var a [2][3]int;
-"""
-        expect = str(Program([VarDecl("a", ArrayType([IntLiteral(2), IntLiteral(3)], IntType()), None)]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 58))
-
-    def test_59(self):
-        """Test variable declaration with initialization"""
-        input = """
-            var a = 1;
-"""
-        expect = str(Program([VarDecl("a", None, IntLiteral(1))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 59))
-
-    def test_60(self):
-        """Test struct type declaration"""
-        input = """
-            type Votien struct {
-                a int;
-            }
-"""
-        expect = str(Program([StructType("Votien", [("a", IntType())], [])]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 60))
-
-    def test_61(self):
-        """Test repeated struct type declaration"""
-        input = """
-            type Votien struct {
-                a int;
-            }
-"""
-        expect = str(Program([StructType("Votien", [("a", IntType())], [])]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 61))
-
-    def test_62(self):
-        """Test struct type with multiple fields"""
-        input = """
-            type Votien struct {
-                a  int;
-                b  boolean;
-            }
-"""
-        expect = str(Program([StructType("Votien", [("a", IntType()), ("b", BoolType())], [])]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 62))
-
-    def test_63(self):
-        """Test struct type with array field"""
-        input = """
-            type Votien struct {
-                a  int;
-                b  boolean;
-                c  [2]Votien;
-            }
-"""
-        expect = str(Program([StructType("Votien", [("a", IntType()), ("b", BoolType()), ("c", ArrayType([IntLiteral(2)], Id("Votien")))], [])]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 63))
-
-    def test_64(self):
-        """Test interface type with no-parameter method"""
-        input = """
-            type Votien interface {
-                Add() ;
-            }
-"""
-        expect = str(Program([InterfaceType("Votien", [Prototype("Add", [], VoidType())])]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 64))
-        
-    def test_65(self):
-        """Test interface type with single-parameter method"""
-        input = """
-            type Votien interface {
-                Add(a int) ;
-            }
-"""
-        expect = str(Program([InterfaceType("Votien", [Prototype("Add", [IntType()], VoidType())])]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 65))
-        
-    def test_66(self):
-        """Test interface type with two-parameter method"""
-        input = """
-            type Votien interface {
-                Add(a int, b int) ;
-            }
-"""
-        expect = str(Program([InterfaceType("Votien", [Prototype("Add", [IntType(), IntType()], VoidType())])]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 66))
-
-    def test_67(self):
-        """Test interface type with multiple parameters of same type"""
-        input = """
-            type Votien interface {
-                Add(a, c int, b int) ;
-            }
-"""
-        expect = str(Program([InterfaceType("Votien", [Prototype("Add", [IntType(), IntType(), IntType()], VoidType())])]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 67))
-
-    def test_68(self):
-        """Test interface type with array return type"""
-        input = """
-            type Votien interface {
-                Add(a, c int, b int) [2]string;
-            }
-"""
-        expect = str(Program([InterfaceType("Votien", [Prototype("Add", [IntType(), IntType(), IntType()], ArrayType([IntLiteral(2)], StringType()))])]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 68))
-
-    def test_69(self):
-        """Test interface type with multiple method signatures"""
-        input = """
-            type Votien interface {
-                Add() [2]string;
-                Add() ID;
-            }
-"""
-        expect = str(Program([InterfaceType("Votien", [Prototype("Add", [], ArrayType([IntLiteral(2)], StringType())), Prototype("Add", [], Id("ID"))])]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 69))
-
-    def test_70(self):
-        """Test interface type with simple method"""
-        input = """
-            type Votien interface {
-                Add();
-            }
-"""
-        expect = str(Program([InterfaceType("Votien", [Prototype("Add", [], VoidType())])]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 70))
-        
-    def test_71(self):
-        """Test simple function declaration"""
-        input = """
-            func foo() {return;}
-"""
-        expect = str(Program([FuncDecl("foo", [], VoidType(), Block([Return(None)]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 71))
-
-    def test_72(self):
-        """Test function with array parameter"""
-        input = """
-            func foo(a [2]ID) {return;}
-"""
-        expect = str(Program([FuncDecl("foo", [ParamDecl("a", ArrayType([IntLiteral(2)], Id("ID")))], VoidType(), Block([Return(None)]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 72))
-
-    def test_73(self):
-        """Test function with mixed parameter types"""
-        input = """
-            func foo(a int, b [1]int) {return;}
-"""
-        expect = str(Program([FuncDecl("foo", [ParamDecl("a", IntType()), ParamDecl("b", ArrayType([IntLiteral(1)], IntType()))], VoidType(), Block([Return(None)]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 73))
-
-    def test_74(self):
-        """Test function with array return type"""
-        input = """
-            func foo() [2]int {return;}
-"""
-        expect = str(Program([FuncDecl("foo", [], ArrayType([IntLiteral(2)], IntType()), Block([Return(None)]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 74))
-
-    def test_75(self):
-        """Test simple method declaration"""
-        input = """
-            func (Cat c) foo() {return;}
-"""
-        expect = str(Program([MethodDecl("Cat", Id("c"), FuncDecl("foo", [], VoidType(), Block([Return(None)])))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 75))
-
-    def test_76(self):
-        """Test method with array parameter"""
-        input = """
-            func (Cat c) foo(a [2]ID) {return;}
-"""
-        expect = str(Program([MethodDecl("Cat", Id("c"), FuncDecl("foo", [ParamDecl("a", ArrayType([IntLiteral(2)], Id("ID")))], VoidType(), Block([Return(None)])))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 76))
-
-    def test_77(self):
-        """Test method with mixed parameter types"""
-        input = """
-            func (Cat c) foo(a int, b [1]int) {return;}
-"""
-        expect = str(Program([MethodDecl("Cat", Id("c"), FuncDecl("foo", [ParamDecl("a", IntType()), ParamDecl("b", ArrayType([IntLiteral(1)], IntType()))], VoidType(), Block([Return(None)])))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 77))
-
-    def test_78(self):
-        """Test method with array return type"""
-        input = """
-            func (Cat c) foo() [2]int {return;}
-"""
-        expect = str(Program([MethodDecl("Cat", Id("c"), FuncDecl("foo", [], ArrayType([IntLiteral(2)], IntType()), Block([Return(None)])))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 78))
-
-    def test_79(self):
-        """Test mixed declarations"""
-        input = """
-            var a = 1;
-            const b = 2;
-            type a struct{a float;}
-            type b interface {foo();}
-            func foo(){return;}
-            func (Cat c) foo() [2]int {return;}
-"""
-        expect = str(Program([VarDecl("a", None, IntLiteral(1)), ConstDecl("b", None, IntLiteral(2)), StructType("a", [("a", FloatType())], []), InterfaceType("b", [Prototype("foo", [], VoidType())]), FuncDecl("foo", [], VoidType(), Block([Return(None)])), MethodDecl("Cat", Id("c"), FuncDecl("foo", [], ArrayType([IntLiteral(2)], IntType()), Block([Return(None)])))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 79))
-
-    def test_80(self):
-        """Test function with multiple complex array parameters"""
-        input = """
-            func foo(a, b, c, d [ID][2][c] ID) {return;}
-"""
-        expect = str(Program([FuncDecl("foo", [ParamDecl("a", ArrayType([Id("ID"), IntLiteral(2), Id("c")], Id("ID"))), ParamDecl("b", ArrayType([Id("ID"), IntLiteral(2), Id("c")], Id("ID"))), ParamDecl("c", ArrayType([Id("ID"), IntLiteral(2), Id("c")], Id("ID"))), ParamDecl("d", ArrayType([Id("ID"), IntLiteral(2), Id("c")], Id("ID")))], VoidType(), Block([Return(None)]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 80))
-
-    def test_81(self):
-        """Test function with constant declaration"""
-        input = """
-            func foo(){
-                const a = 1.;
-            }
-"""
-        expect = str(Program([FuncDecl("foo", [], VoidType(), Block([ConstDecl("a", None, FloatLiteral(1.0))]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 81))
-
-    def test_82(self):
-        """Test function with variable declaration"""
-        input = """
-            func foo(){
-                var a = 1.;
-            }
-"""
-        expect = str(Program([FuncDecl("foo", [], VoidType(), Block([VarDecl("a", None, FloatLiteral(1.0))]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 82))
-
-    def test_83(self):
-        """Test function with array variable declaration"""
-        input = """
-            func foo(){
-                var a [1]int = 1;
-            }
-"""
-        expect = str(Program([FuncDecl("foo", [], VoidType(), Block([VarDecl("a", ArrayType([IntLiteral(1)], IntType()), IntLiteral(1))]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 83))
-
-    def test_84(self):
-        """Test function with uninitialized variable declaration"""
-        input = """
-            func foo(){
-                var a int;
-            }
-"""
-        expect = str(Program([FuncDecl("foo", [], VoidType(), Block([VarDecl("a", IntType(), None)]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 84))
-
-    def test_85(self):
-        """Test function with multiple assignment operators"""
-        input = """
-            func foo(){
-                a += 1;
-                a -= 1;
-                a *= 1;
-                a /= 1;
-                a %= 1;
-            }
-"""
-        expect = str(Program([FuncDecl("foo", [], VoidType(), Block([Assign(Id("a"), BinaryOp("+", Id("a"), IntLiteral(1))), Assign(Id("a"), BinaryOp("-", Id("a"), IntLiteral(1))), Assign(Id("a"), BinaryOp("*", Id("a"), IntLiteral(1))), Assign(Id("a"), BinaryOp("/", Id("a"), IntLiteral(1))), Assign(Id("a"), BinaryOp("%", Id("a"), IntLiteral(1)))]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 85))
-
-    def test_86(self):
-        """Test function with array assignment using expression"""
-        input = """
-            func foo(){
-                a[1 + 1] := 1;
-            }
-"""
-        expect = str(Program([FuncDecl("foo", [], VoidType(), Block([Assign(ArrayCell(Id("a"), [BinaryOp("+", IntLiteral(1), IntLiteral(1))]), IntLiteral(1))]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 86))
-
-    def test_87(self):
-        """Test function with nested array and field assignment"""
-        input = """
-            func foo(){
-                a[2].b.c[2] := 1;
-            }
-"""
-        expect = str(Program([FuncDecl("foo", [], VoidType(), Block([Assign(ArrayCell(FieldAccess(FieldAccess(ArrayCell(Id("a"), [IntLiteral(2)]), "b"), "c"), [IntLiteral(2)]), IntLiteral(1))]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 87))
-
-    def test_88(self):
-        """Test function with multiple complex assignments"""
-        input = """
-            func foo(){
-                a["s"][foo()] := a[2][2][3];
-                a[2] := a[3][4];
-                b.c.a[2] := b.c.a[2];
-                b.c.a[2][3] := b.c.a[2][3];
-            }
-"""
-        expect = str(Program([FuncDecl("foo", [], VoidType(), Block([Assign(ArrayCell(Id("a"), [StringLiteral("s"), FuncCall("foo", [])]), ArrayCell(Id("a"), [IntLiteral(2), IntLiteral(2), IntLiteral(3)])), Assign(ArrayCell(Id("a"), [IntLiteral(2)]), ArrayCell(Id("a"), [IntLiteral(3), IntLiteral(4)])), Assign(ArrayCell(FieldAccess(FieldAccess(Id("b"), "c"), "a"), [IntLiteral(2)]), ArrayCell(FieldAccess(FieldAccess(Id("b"), "c"), "a"), [IntLiteral(2)])), Assign(ArrayCell(FieldAccess(FieldAccess(Id("b"), "c"), "a"), [IntLiteral(2), IntLiteral(3)]), ArrayCell(FieldAccess(FieldAccess(Id("b"), "c"), "a"), [IntLiteral(2), IntLiteral(3)]))]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 88))
-
-    def test_89(self):
-        """Test function with field assignment"""
-        input = """
-            func foo(){
-                a.b := 1;
-            }
-"""
-        expect = str(Program([FuncDecl("foo", [], VoidType(), Block([Assign(FieldAccess(Id("a"), "b"), IntLiteral(1))]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 89))
-
-    def test_90(self):
-        """Test function with nested field and array assignment"""
-        input = """
-            func foo(){
-                a.b[2].c := 1;
-            }
-"""
-        expect = str(Program([FuncDecl("foo", [], VoidType(), Block([Assign(FieldAccess(ArrayCell(FieldAccess(Id("a"), "b"), [IntLiteral(2)]), "c"), IntLiteral(1))]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 90))
-
-    def test_91(self):
-        """Test function with break and continue"""
-        input = """
-            func foo(){
-                break;
-                continue;
-            }
-"""
-        expect = str(Program([FuncDecl("foo", [], VoidType(), Block([Break(), Continue()]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 91))
-
-    def test_92(self):
-        """Test function with multiple return statements"""
-        input = """
-            func foo(){
-                return;
-                return foo() + 2;
-            }
-"""
-        expect = str(Program([FuncDecl("foo", [], VoidType(), Block([Return(None), Return(BinaryOp("+", FuncCall("foo", []), IntLiteral(2)))]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 92))
-
-    def test_93(self):
-        """Test function with various calls"""
-        input = """
-            func foo(){
+    
+    def test_arithmetic_expression_with_parentheses(self):
+        """Test biểu thức số học với ngoặc"""
+        input = "func main() { putInt((a+b)*c); };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                     Block([
+                         FuncCall("putInt", [
+                             BinaryOp("*", BinaryOp("+", Id("a"), Id("b")), Id("c"))
+                         ])
+                     ]))
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 334))
+
+    def test_function_call_multiple_args(self):
+        """Test lời gọi hàm với nhiều đối số"""
+        input = "func main() { foo(1,2,3); };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                     Block([
+                         FuncCall("foo", [IntLiteral(1), IntLiteral(2), IntLiteral(3)])
+                     ]))
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 335))
+
+    def test_field_assignment(self):
+        """Test gán giá trị cho trường (field assignment)"""
+        input = "func main() { x.y := 10; };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                     Block([
+                         Assign(FieldAccess(Id("x"), "y"), IntLiteral(10))
+                     ]))
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 336))
+
+    def test_chained_field_access(self):
+        """Test truy cập trường lồng nhau (chained field access)"""
+        input = "func main() { putInt(a.b.c); };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                     Block([
+                         FuncCall("putInt", [FieldAccess(FieldAccess(Id("a"), "b"), "c")])
+                     ]))
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 337))
+
+    def test_function_with_parameter_no_body(self):
+        """Test hàm với tham số nhưng thân hàm rỗng"""
+        input = "func greet(name string) {};"
+        expect = str(Program([
+            FuncDecl("greet", [ParamDecl("name", StringType())], VoidType(), Block([]))
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 338))
+
+    def test_method_decl_multiple_params(self):
+        """Test khai báo phương thức với nhiều tham số và assignment trong thân"""
+        input = "func (p Person) setAge(newAge int) { p.age := newAge; };"
+        expect = str(Program([
+            MethodDecl("p", Id("Person"),
+                       FuncDecl("setAge", [ParamDecl("newAge", IntType())],
+                                VoidType(),
+                                Block([
+                                    Assign(FieldAccess(Id("p"), "age"), Id("newAge"))
+                                ])))
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 339))
+
+    def test_interface_multiple_prototypes(self):
+        """Test khai báo giao diện với nhiều prototype phương thức"""
+        input = """
+            type I interface {
                 foo();
-                foo(foo(), 2);
-                a.foo();
-                a[2].c.foo(foo(), 2);
-            }
-"""
-        expect = str(Program([FuncDecl("foo", [], VoidType(), Block([FuncCall("foo", []), FuncCall("foo", [FuncCall("foo", []), IntLiteral(2)]), MethCall(Id("a"), "foo", []), MethCall(FieldAccess(ArrayCell(Id("a"), [IntLiteral(2)]), "c"), "foo", [FuncCall("foo", []), IntLiteral(2)])]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 93))
-
-    def test_94(self):
-        """Test function with multiple if statements"""
-        input = """
-            func foo(){
-                if(1) {return;}
-                if(1 + 1) {
-                    return 1;
-                    return;
-                }
-            }
-"""
-        expect = str(Program([FuncDecl("foo", [], VoidType(), Block([If(IntLiteral(1), Block([Return(None)]), None), If(BinaryOp("+", IntLiteral(1), IntLiteral(1)), Block([Return(IntLiteral(1)), Return(None)]), None)]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 94))
-
-    def test_95(self):
-        """Test function with nested if-else statements"""
-        input = """
-            func foo(){
-                if(1) { return;
-                } else if(1) {
-                    return 1;
-                    return;
-                } else {return;}
-                if(1) {return;
-                } else {
-                    return 1;
-                    return;
-                }
-            }
-"""
-        expect = str(Program([FuncDecl("foo", [], VoidType(), Block([If(IntLiteral(1), Block([Return(None)]), If(IntLiteral(1), Block([Return(IntLiteral(1)), Return(None)]), Block([Return(None)]))), If(IntLiteral(1), Block([Return(None)]), Block([Return(IntLiteral(1)), Return(None)]))]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 95))
-
-    def test_96(self):
-        """Test function with multiple else-if branches"""
-        input = """
-            func foo(){
-                if(1) {
-                    return 1;
-                } else if(2) {
-                    return 2;
-                } else if(3) {
-                    return 3;
-                } else if(4) {
-                    return 4;
-                }
-            }
-"""
-        expect = str(Program([FuncDecl("foo", [], VoidType(), Block([If(IntLiteral(1), Block([Return(IntLiteral(1))]), If(IntLiteral(2), Block([Return(IntLiteral(2))]), If(IntLiteral(3), Block([Return(IntLiteral(3))]), If(IntLiteral(4), Block([Return(IntLiteral(4))]), None))))]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 96))
-
-    def test_97(self):
-        """Test function with complex for loops"""
-        input = """
-            func votien() {
-                for a.i[8] {
-                    return;
-                    return 1;
-                }
-                for i := 0; i[1] < 10; i *= 2 + 3  {
-                    return;
-                    return 1;
-                }
-            }
-"""
-        expect = str(Program([FuncDecl("votien", [], VoidType(), Block([ForBasic(ArrayCell(FieldAccess(Id("a"), "i"), [IntLiteral(8)]), Block([Return(None), Return(IntLiteral(1))])), ForStep(Assign(Id("i"), IntLiteral(0)), BinaryOp("<", ArrayCell(Id("i"), [IntLiteral(1)]), IntLiteral(10)), Assign(Id("i"), BinaryOp("*", Id("i"), BinaryOp("+", IntLiteral(2), IntLiteral(3)))), Block([Return(None), Return(IntLiteral(1))]))]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 97))
-
-    def test_98(self):
-        """Test function with for-each loop and array literal"""
-        input = """
-            func votien() {
-                for index, value := range [2]int{1, 2} {
-                    return;
-                    return 1;
-                }
-            }
-"""
-        expect = str(Program([FuncDecl("votien", [], VoidType(), Block([ForEach(Id("index"), Id("value"), ArrayLiteral([IntLiteral(2)], IntType(), [IntLiteral(1), IntLiteral(2)]), Block([Return(None), Return(IntLiteral(1))]))]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 98))
-
-    def test_99(self):
-        """Test function with nested method call"""
-        input = """
-            func votien() {
-                a.b.c[2].d()
-            }
-"""
-        expect = str(Program([FuncDecl("votien", [], VoidType(), Block([MethCall(ArrayCell(FieldAccess(FieldAccess(Id("a"), "b"), "c"), [IntLiteral(2)]), "d", [])]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 99))
-
-    def test_100(self):
-        """Test function with complex array literal return"""
-        input = """
-            func votien() {
-                return [2] ID { {1}, {"2"}, {nil}, {struc{}} };
-                return "THANKS YOU, PPL1 ";
+                bar(x int) int;
             };
-"""
-        expect = str(Program([FuncDecl("votien", [], VoidType(), Block([Return(ArrayLiteral([IntLiteral(2)], Id("ID"), [[IntLiteral(1)], [StringLiteral("2")], [NilLiteral()], [StructLiteral("struc", [])]])), Return(StringLiteral("THANKS YOU, PPL1 "))]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 100))
+        """
+        expect = str(Program([
+            InterfaceType("I", [
+                Prototype("foo", [], VoidType()),
+                Prototype("bar", [IntType()], IntType())
+            ])
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 340))
         
-    def test_101(self):
-        """Test function with complex array literal return"""
-        input = """
-             func votien() {
-                a.b()
-            } 
-            """
-        expect = str(Program([FuncDecl("votien", [], VoidType(), Block([MethCall(Id("a"), "b", [])]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 101))
+    def test_nested_for_loop(self):
+        """Test nested for loops (ForBasic lồng nhau)"""
+        input = "func main() { for x < 10 { for y < 5 { putInt(y); }; }; };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                Block([
+                    ForBasic(BinaryOp("<", Id("x"), IntLiteral(10)),
+                        Block([
+                            ForBasic(BinaryOp("<", Id("y"), IntLiteral(5)),
+                                Block([FuncCall("putInt", [Id("y")])])
+                            )
+                        ])
+                    )
+                ])
+            )
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 341))
+
+    def test_return_expression(self):
+        """Test return statement with a complex expression"""
+        input = "func main() { return a + b * c; };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                Block([
+                    Return(BinaryOp("+", Id("a"), BinaryOp("*", Id("b"), Id("c"))))
+                ])
+            )
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 342))
+
+    def test_chained_unary_operator(self):
+        """Test chaining unary operators (e.g., !!a)"""
+        input = "func main() { putInt(!!a); };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                Block([
+                    FuncCall("putInt", [UnaryOp("!", UnaryOp("!", Id("a")))])
+                ])
+            )
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 343))
+
+    def test_function_call_in_expression(self):
+        """Test function calls used within a binary expression"""
+        input = "func main() { putInt(foo(1) + bar(2)); };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                Block([
+                    FuncCall("putInt", [
+                        BinaryOp("+", FuncCall("foo", [IntLiteral(1)]), FuncCall("bar", [IntLiteral(2)]))
+                    ])
+                ])
+            )
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 344))
+
+    def test_method_call_with_array_access(self):
+        """Test method call on an array element: a[0].foo()"""
+        input = "func main() { a[0].foo(); };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                Block([
+                    MethCall(ArrayCell(Id("a"), [IntLiteral(0)]), "foo", [])
+                ])
+            )
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 345))
+
+    def test_multiple_statements_in_block(self):
+        """Test function body with multiple statements"""
+        input = "func main() { x := 1; y := 2; putInt(x+y); };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                Block([
+                    Assign(Id("x"), IntLiteral(1)),
+                    Assign(Id("y"), IntLiteral(2)),
+                    FuncCall("putInt", [BinaryOp("+", Id("x"), Id("y"))])
+                ])
+            )
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 346))
+
+    def test_assignment_with_field_access(self):
+        """Test assignment to a field: p.age := 30"""
+        input = "func main() { p.age := 30; };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                Block([
+                    Assign(FieldAccess(Id("p"), "age"), IntLiteral(30))
+                ])
+            )
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 347))
+
+    def test_binary_operation_mixed(self):
+        """Test binary operation mixing different arithmetic operators"""
+        input = "func main() { putInt((a - b) / c + d * e); };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                Block([
+                    FuncCall("putInt", [
+                        BinaryOp("+", 
+                            BinaryOp("/", BinaryOp("-", Id("a"), Id("b")), Id("c")),
+                            BinaryOp("*", Id("d"), Id("e"))
+                        )
+                    ])
+                ])
+            )
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 348))
+
+    def test_nested_method_call_chaining(self):
+        """Test chained method calls: p.foo().bar().baz()"""
+        input = "func main() { p.foo().bar().baz(); };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                Block([
+                    MethCall(MethCall(MethCall(Id("p"), "foo", []), "bar", []), "baz", [])
+                ])
+            )
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 349))
+
+    def test_complex_if_nested(self):
+        """Test if-else chain with multiple else-if branches"""
+        input = "func main() { if (a < b) { putInt(1); } else if (a == b) { putInt(0); } else if (a > b) { putInt(-1); } else { putInt(2); }; };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                Block([
+                    If(BinaryOp("<", Id("a"), Id("b")),
+                        Block([FuncCall("putInt", [IntLiteral(1)])]),
+                        If(BinaryOp("==", Id("a"), Id("b")),
+                           Block([FuncCall("putInt", [IntLiteral(0)])]),
+                           If(BinaryOp(">", Id("a"), Id("b")),
+                              Block([FuncCall("putInt", [UnaryOp("-", IntLiteral(1))])]),
+                              Block([FuncCall("putInt", [IntLiteral(2)])])
+                           )
+                        )
+                    )
+                ])
+            )
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 350))
         
-    def test_102(self):
+    def test_for_each_loop_with_underscore(self):
+        """Test for-each loop với '_' làm index"""
+        input = "func main() { for _, v := range arr { putInt(v); }; };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                     Block([
+                         ForEach(Id("_"), Id("v"), Id("arr"),
+                                 Block([FuncCall("putInt", [Id("v")])]))
+                     ]))
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 351))
+
+    def test_augmented_assignment_divide(self):
+        """Test augmented assignment với '/=' operator"""
+        input = "func main() { x /= 2; };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                     Block([
+                         Assign(Id("x"), BinaryOp("/", Id("x"), IntLiteral(2)))
+                     ]))
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 352))
+
+    def test_nested_unary_parentheses(self):
+        """Test chaining unary operators: -(-x)"""
+        input = "func main() { putInt(-(-x)); };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                     Block([
+                         FuncCall("putInt", [UnaryOp("-", UnaryOp("-", Id("x")))])
+                     ]))
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 353))
+
+    def test_multiple_function_calls(self):
+        """Test gọi hàm liên tiếp trong cùng một block"""
+        input = "func main() { foo(); bar(); };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                     Block([
+                         FuncCall("foo", []),
+                         FuncCall("bar", [])
+                     ]))
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 354))
+
+    def test_method_call_on_array_access(self):
+        """Test gọi method trên phần tử mảng: a[1].bar(3)"""
+        input = "func main() { a[1].bar(3); };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                     Block([
+                         MethCall(ArrayCell(Id("a"), [IntLiteral(1)]), "bar", [IntLiteral(3)])
+                     ]))
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 355))
+
+    def test_complex_field_assignment(self):
+        """Test assignment cho trường phức tạp: p.f[2].g := 100"""
+        input = "func main() { p.f[2].g := 100; };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                     Block([
+                         Assign(FieldAccess(ArrayCell(FieldAccess(Id("p"), "f"), [IntLiteral(2)]), "g"), IntLiteral(100))
+                     ]))
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 356))
+
+    def test_var_decl_without_type(self):
+        """Test khai báo biến không có kiểu tường minh nhưng có khởi tạo"""
+        input = "func main() { var x = 5; putInt(x); };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                     Block([
+                         VarDecl("x", None, IntLiteral(5)),
+                         FuncCall("putInt", [Id("x")])
+                     ]))
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 357))
+
+    def test_const_decl_with_expression(self):
+        """Test khai báo hằng số với biểu thức nhị phân"""
+        input = "const pi = 3.14 + 0.00159;"
+        expect = str(Program([
+            ConstDecl("pi", None, BinaryOp("+", FloatLiteral(3.14), FloatLiteral(0.00159)))
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 358))
+
+    def test_method_decl_nonvoid_return(self):
+        """Test khai báo phương thức với kiểu trả về không phải Void"""
+        input = "func (r R) getVal() int { return 42; };"
+        expect = str(Program([
+            MethodDecl("r", Id("R"),
+                       FuncDecl("getVal", [], IntType(),
+                                Block([Return(IntLiteral(42))])))
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 359))
+
+    def test_nested_struct_literal(self):
+        """Test struct literal lồng nhau trong khai báo biến"""
+        input = "func main() { var s S = S{ a: 10, b: S{ a: 20, b: 0} }; };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                     Block([
+                         VarDecl("s",
+                                 Id("S"),
+                                 StructLiteral("S", [
+                                     ("a", IntLiteral(10)),
+                                     ("b", StructLiteral("S", [
+                                         ("a", IntLiteral(20)),
+                                         ("b", IntLiteral(0))
+                                     ]))
+                                 ]))
+                     ]))
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 360))
         
-        input = """
-             func votien() {
-                a[1][2].a()
-            } 
-            """
-        expect = str(Program([FuncDecl("votien", [], VoidType(), Block([MethCall(ArrayCell(Id("a"), [IntLiteral(1),IntLiteral(2)]), "a", [])]))]))
-        self.assertTrue(TestAST.checkASTGen(input, expect, 102))
+    def test_recursive_function(self):
+        """Test hàm đệ quy: tính giai thừa"""
+        input = "func factorial(n int) int { if (n == 0) { return 1; } else { return n * factorial(n-1); }; };"
+        expect = str(Program([
+            FuncDecl("factorial", [ParamDecl("n", IntType())], IntType(),
+                Block([
+                    If(
+                        BinaryOp("==", Id("n"), IntLiteral(0)),
+                        Block([Return(IntLiteral(1))]),
+                        Block([Return(BinaryOp("*", Id("n"), FuncCall("factorial", [BinaryOp("-", Id("n"), IntLiteral(1))])))])
+                    )
+                ])
+            )
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 361))
+
+    def test_compound_statements_in_function(self):
+        """Test hàm với nhiều câu lệnh trong thân hàm"""
+        input = "func main() { var a int = 10; putInt(a); putInt(20); };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                Block([
+                    VarDecl("a", IntType(), IntLiteral(10)),
+                    FuncCall("putInt", [Id("a")]),
+                    FuncCall("putInt", [IntLiteral(20)])
+                ])
+            )
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 362))
+
+    def test_empty_function(self):
+        """Test khai báo hàm không có câu lệnh trong thân hàm"""
+        input = "func main() {};"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(), Block([]))
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 363))
+
+    def test_if_statement_without_else(self):
+        """Test if statement không có nhánh else"""
+        input = "func main() { if (x > 0) { putInt(x); }; };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                Block([
+                    If(
+                        BinaryOp(">", Id("x"), IntLiteral(0)),
+                        Block([FuncCall("putInt", [Id("x")])]),
+                        None
+                    )
+                ])
+            )
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 364))
+
+    def test_for_basic_loop_without_assignment(self):
+        """Test vòng lặp for cơ bản (ForBasic)"""
+        input = "func main() { for (x < 5) { putInt(x); }; };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                Block([
+                    ForBasic(
+                        BinaryOp("<", Id("x"), IntLiteral(5)),
+                        Block([FuncCall("putInt", [Id("x")])])
+                    )
+                ])
+            )
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 365))
+
+    def test_for_step_loop_variant(self):
+        """Test vòng lặp for dạng step với tăng bước khác"""
+        input = "func main() { for x := 0; x < 10; x := x + 2 { putInt(x); }; };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                Block([
+                    ForStep(
+                        Assign(Id("x"), IntLiteral(0)),
+                        BinaryOp("<", Id("x"), IntLiteral(10)),
+                        Assign(Id("x"), BinaryOp("+", Id("x"), IntLiteral(2))),
+                        Block([FuncCall("putInt", [Id("x")])])
+                    )
+                ])
+            )
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 366))
+
+    def test_logical_expression_mixed(self):
+        """Test biểu thức logic phức tạp với AND và OR"""
+        input = "func main() { if ((a && b) || c) { putInt(1); } else { putInt(0); }; };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                Block([
+                    If(
+                        BinaryOp("||", BinaryOp("&&", Id("a"), Id("b")), Id("c")),
+                        Block([FuncCall("putInt", [IntLiteral(1)])]),
+                        Block([FuncCall("putInt", [IntLiteral(0)])])
+                    )
+                ])
+            )
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 367))
+
+    def test_return_nil(self):
+        """Test return statement với nil literal"""
+        input = "func main() { return nil; };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                Block([Return(NilLiteral())])
+            )
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 368))
+
+    def test_unary_not_expression(self):
+        """Test biểu thức với toán tử logic NOT"""
+        input = "func main() { putInt(!flag); };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                Block([FuncCall("putInt", [UnaryOp("!", Id("flag"))])])
+            )
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 369))
+
+    def test_multiple_function_declarations(self):
+        """Test khai báo nhiều hàm trong cùng một chương trình"""
+        input = "func a() {}; func b() { putInt(2); };"
+        expect = str(Program([
+            FuncDecl("a", [], VoidType(), Block([])),
+            FuncDecl("b", [], VoidType(), Block([FuncCall("putInt", [IntLiteral(2)])]))
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 370))
+
+    def test_nested_if_without_else(self):
+        """Test if statement lồng nhau mà không có nhánh else ở ngoài cùng"""
+        input = "func main() { if (x < 0) { if (y < 0) { putInt(1); }; }; };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                Block([
+                    If(
+                        BinaryOp("<", Id("x"), IntLiteral(0)),
+                        Block([
+                            If(
+                                BinaryOp("<", Id("y"), IntLiteral(0)),
+                                Block([FuncCall("putInt", [IntLiteral(1)])]),
+                                None
+                            )
+                        ]),
+                        None
+                    )
+                ])
+            )
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 371))
+
+    def test_augmented_assignment_division(self):
+        """Test augmented assignment với '/=' operator"""
+        input = "func main() { x /= 2; };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                Block([
+                    Assign(Id("x"), BinaryOp("/", Id("x"), IntLiteral(2)))
+                ])
+            )
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 372))
+
+    def test_function_parameter_array(self):
+        """Test hàm với tham số là mảng"""
+        input = "func foo(a [3]int) { putInt(a[0]); };"
+        expect = str(Program([
+            FuncDecl("foo", [ParamDecl("a", ArrayType([IntLiteral(3)], IntType()))], VoidType(),
+                Block([
+                    FuncCall("putInt", [ArrayCell(Id("a"), [IntLiteral(0)])])
+                ])
+            )
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 373))
+
+    def test_struct_decl_with_array_field(self):
+        """Test khai báo struct với một trường là mảng"""
+        input = "type Matrix struct { data [3][3]int; };"
+        expect = str(Program([
+            StructType("Matrix", [("data", ArrayType([IntLiteral(3), IntLiteral(3)], IntType()))], [])
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 374))
+
+    def test_struct_literal_with_array_field(self):
+        """Test struct literal với trường là mảng (chỉ chứa literal)"""
+        input = "func main() { var m Matrix = Matrix{ data: [3][3]int{{1,2,3},{4,5,6},{7,8,9}} }; putInt(m.data[1][1]); };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                Block([
+                    VarDecl("m", Id("Matrix"),
+                        StructLiteral("Matrix", [
+                            ("data", ArrayLiteral( [IntLiteral(3), IntLiteral(3)], IntType(), [
+                                [IntLiteral(1), IntLiteral(2), IntLiteral(3)],
+                                [IntLiteral(4), IntLiteral(5), IntLiteral(6)],
+                                [IntLiteral(7), IntLiteral(8), IntLiteral(9)]
+                            ]))
+                        ])
+                    ),
+                    FuncCall("putInt", [
+                        ArrayCell(FieldAccess(Id("m"), "data"), [IntLiteral(1),IntLiteral(1)])
+                    ])
+                ])
+            )
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 375))
+
+    def test_const_decl_float(self):
+        """Test khai báo hằng số với float literal"""
+        input = "const pi = 3.1415;"
+        expect = str(Program([
+            ConstDecl("pi", None, FloatLiteral(3.1415))
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 376))
+
+    def test_const_decl_nil(self):
+        """Test khai báo hằng số với nil literal"""
+        input = "const nothing = nil;"
+        expect = str(Program([
+            ConstDecl("nothing", None, NilLiteral())
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 377))
+
+    def test_simple_function_with_return(self):
+        """Test hàm đơn giản có return"""
+        input = "func main() { return 42; };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(), Block([Return(IntLiteral(42))]))
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 378))
+
+    def test_if_else_with_unary(self):
+        """Test if-else với biểu thức điều kiện chứa toán tử unary"""
+        input = "func main() { if (!flag) { putInt(0); } else { putInt(1); }; };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                Block([
+                    If(
+                        UnaryOp("!", Id("flag")),
+                        Block([FuncCall("putInt", [IntLiteral(0)])]),
+                        Block([FuncCall("putInt", [IntLiteral(1)])])
+                    )
+                ])
+            )
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 379))
+
+    def test_for_step_loop_simple(self):
+        """Test vòng lặp for dạng step đơn giản"""
+        input = "func main() { for x := 1; x < 5; x := x + 1 { putInt(x); }; };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                Block([
+                    ForStep(
+                        Assign(Id("x"), IntLiteral(1)),
+                        BinaryOp("<", Id("x"), IntLiteral(5)),
+                        Assign(Id("x"), BinaryOp("+", Id("x"), IntLiteral(1))),
+                        Block([FuncCall("putInt", [Id("x")])])
+                    )
+                ])
+            )
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 380))
+
+    def test_break_continue_in_loop(self):
+        """Test break và continue trong vòng lặp"""
+        input = "func main() { for (i < 10) { if (i == 5) { break; } else { continue; }; }; };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                Block([
+                    ForBasic(
+                        BinaryOp("<", Id("i"), IntLiteral(10)),
+                        Block([
+                            If(
+                                BinaryOp("==", Id("i"), IntLiteral(5)),
+                                Block([Break()]),
+                                Block([Continue()])
+                            )
+                        ])
+                    )
+                ])
+            )
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 381))
+
+    def test_function_call_within_expression(self):
+        """Test lời gọi hàm nằm trong biểu thức nhị phân"""
+        input = "func main() { putInt(foo(3) + 7); };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                Block([
+                    FuncCall("putInt", [
+                        BinaryOp("+", FuncCall("foo", [IntLiteral(3)]), IntLiteral(7))
+                    ])
+                ])
+            )
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 382))
+
+    def test_method_decl_without_params(self):
+        """Test khai báo phương thức không có tham số"""
+        input = "func (p Person) printName() { putInt(p.name); };"
+        expect = str(Program([
+            MethodDecl("p", Id("Person"),
+                FuncDecl("printName", [], VoidType(),
+                    Block([FuncCall("putInt", [FieldAccess(Id("p"), "name")])])
+                )
+            )
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 383))
+
+    def test_interface_decl_single_prototype(self):
+        """Test khai báo giao diện với một prototype"""
+        input = "type I interface { foo(); };"
+        expect = str(Program([
+            InterfaceType("I", [Prototype("foo", [], VoidType())])
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 384))
+
+    def test_struct_literal_with_fields(self):
+        """Test struct literal với các trường không phải mảng"""
+        input = "func main() { var p Person = Person{ name: \"Alice\", age: 30 }; putInt(p.age); };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                Block([
+                    VarDecl("p", Id("Person"),
+                        StructLiteral("Person", [
+                            ("name", StringLiteral("\"Alice\"")),
+                            ("age", IntLiteral(30))
+                        ])
+                    ),
+                    FuncCall("putInt", [FieldAccess(Id("p"), "age")])
+                ])
+            )
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 385))
+
+
+    def test_function_multiple_parameters_and_arithmetic(self):
+        """Test hàm với nhiều tham số và biểu thức số học phức tạp"""
+        input = "func add(a int, b int, c int) int { return a + b * c - (a - c); };"
+        expect = str(Program([
+            FuncDecl("add", [ParamDecl("a", IntType()), ParamDecl("b", IntType()), ParamDecl("c", IntType())], IntType(),
+                Block([
+                    Return(BinaryOp("-",
+                        BinaryOp("+", Id("a"), BinaryOp("*", Id("b"), Id("c"))),
+                        BinaryOp("-", Id("a"), Id("c"))
+                    ))
+                ])
+            )
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 386))
+
+    def test_augmented_assignment_multiply(self):
+        """Test augmented assignment với '*=' operator"""
+        input = "func main() { x *= 3; };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                Block([
+                    Assign(Id("x"), BinaryOp("*", Id("x"), IntLiteral(3)))
+                ])
+            )
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 387))
+
+    def test_complex_binary_expression_with_parentheses(self):
+        """Test biểu thức nhị phân phức tạp với ngoặc"""
+        input = "func main() { putInt((a - b) * (c + d)); };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                Block([
+                    FuncCall("putInt", [
+                        BinaryOp("*",
+                            BinaryOp("-", Id("a"), Id("b")),
+                            BinaryOp("+", Id("c"), Id("d"))
+                        )
+                    ])
+                ])
+            )
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 388))
+
+    def test_function_call_nested_argument(self):
+        """Test lời gọi hàm với đối số là lời gọi hàm lồng nhau"""
+        input = "func main() { putInt(foo(bar(2))); };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                Block([
+                    FuncCall("putInt", [
+                        FuncCall("foo", [FuncCall("bar", [IntLiteral(2)])])
+                    ])
+                ])
+            )
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 389))
+
+    def test_method_call_chained_with_field_receiver(self):
+        """Test method call với receiver là field access"""
+        input = "func main() { p.address.getCity(); };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                Block([
+                    MethCall(FieldAccess(Id("p"), "address"), "getCity", [])
+                ])
+            )
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 390))
+
+    def test_if_statement_without_else_simple(self):
+        """Test if statement không có nhánh else (điều kiện là phép so sánh)"""
+        input = "func main() { if (x >= 10) { putInt(x); }; };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                Block([
+                    If(
+                        BinaryOp(">=", Id("x"), IntLiteral(10)),
+                        Block([FuncCall("putInt", [Id("x")])]),
+                        None
+                    )
+                ])
+            )
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 391))
+
+    def test_return_without_expression(self):
+        """Test return statement không có biểu thức"""
+        input = "func main() { return; };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(), Block([Return(None)]))
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 392))
+
+    def test_multiple_function_declarations(self):
+        """Test khai báo nhiều hàm trong cùng một chương trình"""
+        input = "func f() {}; func g() { return 5; };"
+        expect = str(Program([
+            FuncDecl("f", [], VoidType(), Block([])),
+            FuncDecl("g", [], VoidType(), Block([Return(IntLiteral(5))]))
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 393))
+
+    def test_method_decl_with_params_and_return_expression(self):
+        """Test khai báo phương thức với tham số và biểu thức trả về phức tạp"""
+        input = "func (p Person) compute(x int, y int) int { return p.value + x - y; };"
+        expect = str(Program([
+            MethodDecl("p", Id("Person"),
+                FuncDecl("compute", [ParamDecl("x", IntType()), ParamDecl("y", IntType())], IntType(),
+                    Block([
+                        Return(BinaryOp("-", 
+                            BinaryOp("+", FieldAccess(Id("p"), "value"), Id("x")),
+                            Id("y")
+                        ))
+                    ])
+                )
+            )
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 394))
+
+    def test_interface_decl_multiple_prototypes(self):
+        """Test khai báo giao diện với nhiều prototype"""
+        input = "type I interface { foo(); bar(x int) int; baz() string; };"
+        expect = str(Program([
+            InterfaceType("I", [
+                Prototype("foo", [], VoidType()),
+                Prototype("bar", [IntType()], IntType()),
+                Prototype("baz", [], StringType())
+            ])
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 395))
+
+    def test_struct_decl_multiple_fields(self):
+        """Test khai báo struct với nhiều trường khác nhau"""
+        input = "type Person struct { name string; age int; salary float; };"
+        expect = str(Program([
+            StructType("Person", [
+                ("name", StringType()),
+                ("age", IntType()),
+                ("salary", FloatType())
+            ], [])
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 396))
+
+    def test_assignment_to_nested_field(self):
+        """Test assignment cho trường lồng nhau: p.info.score := 99"""
+        input = "func main() { p.info.score := 99; };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                Block([
+                    Assign(
+                        FieldAccess(FieldAccess(Id("p"), "info"), "score"),
+                        IntLiteral(99)
+                    )
+                ])
+            )
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 397))
+
+    def test_if_else_nested(self):
+        """Test if-else lồng nhau với nhiều nhánh"""
+        input = ("func main() { "
+                 "if (a < b) { if (c < d) { putInt(1); } else { putInt(2); }; } "
+                 "else { putInt(3); }; };")
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                Block([
+                    If(
+                        BinaryOp("<", Id("a"), Id("b")),
+                        Block([
+                            If(
+                                BinaryOp("<", Id("c"), Id("d")),
+                                Block([FuncCall("putInt", [IntLiteral(1)])]),
+                                Block([FuncCall("putInt", [IntLiteral(2)])])
+                            )
+                        ]),
+                        Block([FuncCall("putInt", [IntLiteral(3)])])
+                    )
+                ])
+            )
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 398))
         
-    # def test_103(self):
-        
-    #     input = """
-    #          func votien() {
-    #             a().a()
-    #         } 
-    #         """
-    #     expect = str(Program([FuncDecl("votien", [], VoidType(), Block([MethCall(FuncCall("a", []), "a", [])]))]))
-    #     self.assertTrue(TestAST.checkASTGen(input, expect, 103))
+    def test_for_loop_with_if_inside(self):
+        """Test vòng lặp for dạng step với if bên trong vòng lặp, sử dụng modulo"""
+        input = "func main() { for x := 0; x < 10; x := x + 1 { if (x % 2 == 0) { putInt(x); }; }; };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                Block([
+                    ForStep(
+                        Assign(Id("x"), IntLiteral(0)),
+                        BinaryOp("<", Id("x"), IntLiteral(10)),
+                        Assign(Id("x"), BinaryOp("+", Id("x"), IntLiteral(1))),
+                        Block([
+                            If(
+                                BinaryOp("==", BinaryOp("%", Id("x"), IntLiteral(2)), IntLiteral(0)),
+                                Block([FuncCall("putInt", [Id("x")])]),
+                                None
+                            )
+                        ])
+                    )
+                ])
+            )
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 400))
+
+    def test_assignment_with_method_call(self):
+        """Test assignment với field access ở lhs và method call làm rhs"""
+        input = "func main() { p.age := p.getAge(); };"
+        expect = str(Program([
+            FuncDecl("main", [], VoidType(),
+                Block([
+                    Assign(
+                        FieldAccess(Id("p"), "age"),
+                        MethCall(Id("p"), "getAge", [])
+                    )
+                ])
+            )
+        ]))
+        self.assertTrue(TestAST.checkASTGen(input, expect, 401))

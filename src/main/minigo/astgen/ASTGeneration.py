@@ -462,8 +462,7 @@ class ASTGeneration(MiniGoVisitor):
             return self.visit(ctx.functionCall_stmt())
         elif ctx.ID():
             return Id(ctx.ID().getText())
-        else:
-            return None
+       
     
     # return_stmt: RETURN expr | RETURN;
     def visitReturn_stmt(self, ctx: MiniGoParser.Return_stmtContext):
@@ -557,7 +556,7 @@ class ASTGeneration(MiniGoVisitor):
             right = self.visit(ctx.expr5())
             return BinaryOp(op, left, right)
     
-    # expr5: (NOT | SUB) expr5 | expr6;
+    # expr5: (NOT |  ) expr5 | expr6;
     def visitExpr5(self, ctx: MiniGoParser.Expr5Context):
         if ctx.getChildCount() == 1:
             return self.visit(ctx.expr6())
@@ -631,12 +630,12 @@ class ASTGeneration(MiniGoVisitor):
     def visitLiteral(self, ctx: MiniGoParser.LiteralContext):
         text = ctx.getText()
         if ctx.INT_LIT():
-            return IntLiteral(int(text))
+            return IntLiteral(text)
         elif ctx.FLOAT_LIT():
-            return FloatLiteral(float(text))
+            return FloatLiteral(text)
         elif ctx.STRING_LIT():
             # Loại bỏ dấu nháy đầu và cuối
-            return StringLiteral(text[1:-1])
+            return StringLiteral(text)
         elif ctx.BOOLEAN_LIT():
             return BooleanLiteral(text.lower() == "true")
         elif ctx.NIL_LIT():

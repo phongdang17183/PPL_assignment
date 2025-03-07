@@ -205,7 +205,7 @@ expr2:
 	| expr3;
 expr3: expr3 (ADD | SUB) expr4 | expr4;
 expr4: expr4 (MULT | DIV | MOD) expr5 | expr5;
-expr5: (NOT | SUB) expr5 | expr6;
+expr5: (NOT | SUB ) expr5 | expr6;
 expr6: expr6 (L_BRACKET expr R_BRACKET | DOT validCall) | expr7;
 expr7:
 	ID
