@@ -52,7 +52,7 @@ class Visitor(ABC):
     def visitBlock(self, param):
         pass
     @abstractmethod
-    def visitAsign(self, param):
+    def visitAssign(self, param):
         pass
     @abstractmethod
     def visitIf(self, param):

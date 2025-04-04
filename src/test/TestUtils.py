@@ -9,6 +9,8 @@ from MiniGoLexer import MiniGoLexer
 from MiniGoParser import MiniGoParser
 from lexererr import *
 from ASTGeneration import ASTGeneration
+from main.minigo.checker.StaticCheck import StaticChecker
+from main.minigo.checker.StaticError import *
 
 class TestUtil:
     @staticmethod
@@ -100,3 +102,58 @@ class TestAST:
         line = dest.read()
         return line == expect
         
+class TestChecker:
+    @staticmethod
+    def test(input,expect,num):
+        return TestChecker.checkStatic(input,expect,num)
+    @staticmethod
+    def checkStatic(input,expect,num):
+        dest = open("./test/solutions/" + str(num) + ".txt","w")
+        
+        if type(input) is str:
+            inputfile = TestUtil.makeSource(input,num)
+            lexer = MiniGoLexer(inputfile)
+            tokens = CommonTokenStream(lexer)
+            parser = MiniGoParser(tokens)
+            tree = parser.program()
+            asttree = ASTGeneration().visit(tree)
+        else:
+            inputfile = TestUtil.makeSource(str(input),num)
+            asttree = input
+        
+        
+        checker = StaticChecker(asttree)
+        try:
+            res = checker.check()
+            #dest.write(str(list(res)))
+        except StaticError as e:
+            dest.write(str(e)+'\n')
+        finally:
+            dest.close()
+        dest = open("./test/solutions/" + str(num) + ".txt","r")
+        line = dest.read()
+        return line == expect
+
+    @staticmethod
+    def test1(inputdir,outputdir,num):
+        
+        dest = open(outputdir + "/" + str(num) + ".txt","w")
+        
+        try:
+            lexer = MiniGoLexer(FileStream(inputdir + "/" + str(num) + ".txt"))
+            tokens = CommonTokenStream(lexer)
+            parser = MiniGoParser(tokens)
+            tree = parser.program()
+            asttree = ASTGeneration().visit(tree)
+
+            checker = StaticChecker(asttree)
+            res = checker.check()
+            
+        except StaticError as e:
+            dest.write(str(e)+'\n')
+        except:
+            trace = traceback.format_exc()
+            print ("Test " + str(num) + " catches unexpected error:" + trace + "\n")
+        finally:
+            dest.close()
+             
