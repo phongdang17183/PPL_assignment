@@ -195,7 +195,6 @@ class CheckSuite(unittest.TestCase):
 var A = 1;
 type A struct {a int;}
         """
-        # input = Program([StructType("S1",[("votien",IntType())],[]),StructType("S2",[("votien",IntType())],[]),VarDecl("v",Id("S1"), None),ConstDecl("x",None,Id("v")),VarDecl("z",Id("S1"),Id("x")),VarDecl("k",Id("S2"),Id("x"))])
    
         expect = "Redeclared Variable: A\n"
         self.assertTrue(TestChecker.test(input,expect,419))
@@ -288,7 +287,7 @@ func foo() {
     def test_426(self):
         input = """
         type A struct {a [2]int;} 
-        type VO interface {foo() int;}
+        type B interface {foo() int;}
 
         func (v A) foo() int {return 1;}
 
@@ -467,3 +466,726 @@ func foo () {
         """
         expect = "Undeclared Identifier: b\n"
         self.assertTrue(TestChecker.test(input,expect,436))
+        
+    def test_437(self): 
+        input = """ func foo(a int, b string) float {}; func main() { var x = foo(1); }; """ 
+        expect = "Type Mismatch: FuncCall(foo,[IntLiteral(1)])\n" 
+        self.assertTrue(TestChecker.test(input, expect, 437))
+        
+    # Test 438: Gọi hàm với kiểu đối số không phù hợp.
+    def test_438(self):
+        input = """
+            func foo(a int, b string) float {};
+            func main() {
+                var x = foo("hello", 2);
+            }
+        """
+        expect = "Type Mismatch: FuncCall(foo,[StringLiteral(\"hello\"),IntLiteral(2)])\n"
+        self.assertTrue(TestChecker.test(input, expect, 438))
+
+    # Test 439: Lệnh return trong hàm yêu cầu trả về kiểu int nhưng trả về chuỗi.
+    def test_439(self):
+        input = """
+            func foo() int {
+                return "abc";
+            }
+        """
+        expect = "Type Mismatch: Return(StringLiteral(\"abc\"))\n"
+        self.assertTrue(TestChecker.test(input, expect, 439))
+
+    # Test 440: Lệnh return có biểu thức trong hàm kiểu void (trong MiniGo, hàm void không cho phép return có giá trị).
+    def test_440(self):
+        input = """
+            func main() {
+                return 1;
+            }
+        """
+        expect = "Type Mismatch: Return(IntLiteral(1))\n"
+        self.assertTrue(TestChecker.test(input, expect, 440))
+
+    # Test 441: Dùng chỉ số không phải kiểu int khi truy cập mảng.
+    def test_441(self):
+        input = """
+            func main() {
+                var a [5]int;
+                var x = a["1"];
+            }
+        """
+        expect = "Type Mismatch: ArrayCell(Id(a),[StringLiteral(\"1\")])\n"
+        self.assertTrue(TestChecker.test(input, expect, 441))
+
+    # Test 442: Truy cập field trên giá trị không phải kiểu struct.
+    def test_442(self):
+        input = """
+            func main() {
+                var a int = 5;
+                var x = a.name;
+            }
+        """
+        expect = "Type Mismatch: FieldAccess(Id(a),name)\n"
+        self.assertTrue(TestChecker.test(input, expect, 442))
+
+    # Test 443: Truy cập field không tồn tại trong struct.
+    def test_443(self):
+        input = """
+            type Person struct { name string; age int; };
+            func main() {
+                var p Person;
+                var x = p.address;
+            }
+        """
+        expect = "Undeclared Field: address\n"
+        self.assertTrue(TestChecker.test(input, expect, 443))
+
+    # Test 444: Gán giá trị cho biến kiểu interface với một struct mà không thực hiện đủ các method được yêu cầu.
+    def test_444(self):
+        input = """
+            type Calculator interface { Add(a int, b int) int; };
+            type MyCalculator struct { x int; };
+            func (mc MyCalculator) Sub(a int, b int) int { return a - b; }
+            func main() {
+                var calc Calculator = MyCalculator{x: 10};
+            }
+        """
+        expect = "Type Mismatch: VarDecl(calc,Id(Calculator),StructLiteral(MyCalculator,[(x,IntLiteral(10))]))\n"
+        self.assertTrue(TestChecker.test(input, expect, 444))
+
+    # Test 445: Toán tử Unary "!" áp dụng cho kiểu không hợp lệ (int thay vì boolean).
+    def test_445(self):
+        input = """
+            func main() {
+                var a = !5;
+            }
+        """
+        expect = "Type Mismatch: UnaryOp(!,IntLiteral(5))\n"
+        self.assertTrue(TestChecker.test(input, expect, 445))
+
+    # Test 446: Toán tử gán cộng hợp (+=) với kiểu không phù hợp.
+    def test_446(self):
+        input = """
+            func main() {
+                var a int = 1;
+                a += "abc";
+            }
+        """
+        expect = "Type Mismatch: BinaryOp(Id(a),+,StringLiteral(\"abc\"))\n"
+        self.assertTrue(TestChecker.test(input, expect, 446))
+
+    # Test 447: Vòng lặp for-each với biểu thức sau từ không phải kiểu mảng.
+    def test_447(self):
+        input = """
+            func main() {
+                var x int = 10;
+                for i, v := range x {
+                    putInt(1);
+                }
+            }
+        """
+        expect = "Type Mismatch: ForEach(Id(i),Id(v),Id(x),Block([FuncCall(putInt,[IntLiteral(1)])]))\n"
+        self.assertTrue(TestChecker.test(input, expect, 447))
+
+    # Test 448: Gọi method trên biến interface với kiểu đối số không phù hợp.
+    def test_448(self):
+        input = """
+            type I interface { foo(a int) int; };
+            type A struct { x int; };
+            func (a A) foo(b int) int { return b; }
+            func main() {
+                var i I;
+                i := A{x: 1};
+                i.foo(1.2);
+            }
+        """
+        expect = "Type Mismatch: MethodCall(Id(i),foo,[FloatLiteral(1.2)])\n"
+        self.assertTrue(TestChecker.test(input, expect, 448))
+
+    # Test 449: Biểu thức nhị phân với toán tử "+" giữa int và boolean.
+    def test_449(self):
+        input = """
+            func main() {
+                var a int = 10;
+                var b = a + true;
+            }
+        """
+        expect = "Type Mismatch: BinaryOp(Id(a),+,BooleanLiteral(true))\n"
+        self.assertTrue(TestChecker.test(input, expect, 449))
+
+    # Test 450: Tái khai báo biến trong cùng một block (không cho phép redeclaration trong cùng phạm vi).
+    def test_450(self):
+        input = """
+            func foo(a int) {
+                
+                    var x int = 5;
+                    var x int = 6;
+                
+            }
+        """
+        expect = "Redeclared Variable: x\n"
+        self.assertTrue(TestChecker.test(input, expect, 450))
+        
+        
+        # Test 451: Sử dụng identifier chưa được khai báo (ở RHS của khai báo biến).
+    def test_451(self):
+        input = """
+            func main() {
+                var a = b;
+            }
+        """
+        expect = "Undeclared Identifier: b\n"
+        self.assertTrue(TestChecker.test(input, expect, 451))
+
+    # Test 452: Sai số chiều của mảng khi khởi tạo (số phần tử trong literal khác với kích thước khai báo).
+    def test_452(self):
+        input = """
+            func main() {
+                var a [2]int = [3]int{1,2,3};
+            }
+        """
+        expect = "Type Mismatch: VarDecl(a,ArrayType(IntType,[IntLiteral(2)]),ArrayLiteral([IntLiteral(3)],IntType,[IntLiteral(1),IntLiteral(2),IntLiteral(3)]))\n"
+        self.assertTrue(TestChecker.test(input, expect, 452))
+
+    # Test 453: Toán tử nhân (*) áp dụng giữa float và string.
+    def test_453(self):
+        input = """
+            func main() {
+                var a = 2.5 * "test";
+            }
+        """
+        expect = "Type Mismatch: BinaryOp(FloatLiteral(2.5),*,StringLiteral(\"test\"))\n"
+        self.assertTrue(TestChecker.test(input, expect, 453))
+
+    # Test 454: Toán tử Unary "-" áp dụng cho boolean.
+    def test_454(self):
+        input = """
+            func main() {
+                var a = -true;
+            }
+        """
+        expect = "Type Mismatch: UnaryOp(-,BooleanLiteral(true))\n"
+        self.assertTrue(TestChecker.test(input, expect, 454))
+
+    # Test 455: Redeclared biến trong block nội bộ khi tên trùng với tham số (nằm cùng một scope).
+    def test_455(self):
+        input = """
+            func main(x int) {
+                
+                    var x = 10;
+                    var x = 20;
+                
+            }
+        """
+        expect = "Redeclared Variable: x\n"
+        self.assertTrue(TestChecker.test(input, expect, 455))
+
+    # Test 456: Sử dụng kiểu chưa được khai báo trong khai báo biến.
+    def test_456(self):
+        input = """
+            func main() {
+                var a MyInt = 5;
+            }
+        """
+        expect = "Undeclared Identifier: MyInt\n"
+        self.assertTrue(TestChecker.test(input, expect, 456))
+
+    # Test 457: Toán tử && với toán hạng không phải boolean.
+    def test_457(self):
+        input = """
+            func main() {
+                var a = 5 && 10;
+            }
+        """
+        expect = "Type Mismatch: BinaryOp(IntLiteral(5),&&,IntLiteral(10))\n"
+        self.assertTrue(TestChecker.test(input, expect, 457))
+
+    # Test 458: Truy cập field trên biến kiểu interface (không hỗ trợ field access).
+    def test_458(self):
+        input = """
+            type I interface { foo() int; };
+            func main() {
+                var i I;
+                var x = i.field;
+            }
+        """
+        expect = "Type Mismatch: FieldAccess(Id(i),field)\n"
+        self.assertTrue(TestChecker.test(input, expect, 458))
+
+    # Test 459: Gán mảng với literal mảng mà kiểu phần tử không tương thích (string thay vì int).
+    def test_459(self):
+        input = """
+            func main() {
+                var a [2]int = [2]string{"one", "two"};
+            }
+        """
+        expect = "Type Mismatch: VarDecl(a,ArrayType(IntType,[IntLiteral(2)]),ArrayLiteral([IntLiteral(2)],StringType,[StringLiteral(\"one\"),StringLiteral(\"two\")]))\n"
+        self.assertTrue(TestChecker.test(input, expect, 459))
+
+    def test_460(self):
+        input = """
+            func foo(a [2]int) int { return 1; }
+            func main() {
+                var arr int;
+                foo(arr);
+            }
+        """
+        expect = "Type Mismatch: FuncCall(foo,[Id(arr)])\n"
+        self.assertTrue(TestChecker.test(input, expect, 460))
+
+    # Test 461: Gọi hàm có return type Void nhưng sử dụng trong biểu thức (không cho phép).
+    def test_461(self):
+        input = """
+            func foo() {}
+            func main() {
+                var a = foo();
+            }
+        """
+        expect = "Type Mismatch: FuncCall(foo,[])\n"
+        self.assertTrue(TestChecker.test(input, expect, 461))
+
+    # Test 462: Sử dụng toán tử modulo (%) với một trong số toán hạng là float.
+    def test_462(self):
+        input = """
+            func main() {
+                var a = 5 % 2.0;
+            }
+        """
+        expect = "Type Mismatch: BinaryOp(IntLiteral(5),%,FloatLiteral(2.0))\n"
+        self.assertTrue(TestChecker.test(input, expect, 462))
+
+    def test_463(self):
+        input = """
+            func main() {
+                var x string = 10;
+            }
+        """
+        expect = "Type Mismatch: VarDecl(x,StringType,IntLiteral(10))\n"
+        self.assertTrue(TestChecker.test(input, expect, 463))
+
+    # Test 464: Gọi method trên biến không phải kiểu struct (sai receiver).
+    def test_464(self):
+        input = """
+            type A struct { x int; };
+            func (a A) foo() int { return a.x; }
+            func main() {
+                var b int = 10;
+                b.foo();
+            }
+        """
+        expect = "Type Mismatch: MethodCall(Id(b),foo,[])\n"
+        self.assertTrue(TestChecker.test(input, expect, 464))
+
+    # Test 465: Sử dụng ArrayCell trên biến không phải kiểu mảng.
+    def test_465(self):
+        input = """
+            func main() {
+                var a int = 5;
+                var b = a[0];
+            }
+        """
+        expect = "Type Mismatch: ArrayCell(Id(a),[IntLiteral(0)])\n"
+        self.assertTrue(TestChecker.test(input, expect, 465))
+
+    # Test 466: Gọi method với số lượng đối số vượt quá định nghĩa.
+    def test_466(self):
+        input = """
+            type A struct { x int; };
+            func (a A) foo(b int) int { return b; }
+            func main() {
+                var a A;
+                a.foo(1,2);
+            }
+        """
+        expect = "Type Mismatch: MethodCall(Id(a),foo,[IntLiteral(1),IntLiteral(2)])\n"
+        self.assertTrue(TestChecker.test(input, expect, 466))
+
+    # Test 467: Struct literal với field không tồn tại (dồn thêm field không khai báo).
+    def test_467(self):
+        input = """
+            type Person struct { name string; age int; };
+            func main() {
+                var p Person = Person{name: "Alice", age: 30, address: "HCM"};
+                p.address := "HN";
+            }
+        """
+        expect = "Undeclared Field: address\n"
+        self.assertTrue(TestChecker.test(input, expect, 467))
+
+    # Test 468: Gọi method của interface mà method đó không tồn tại.
+    def test_468(self):
+        input = """
+            type I interface { foo(a int) int; };
+            func main() {
+                var i I;
+                i.foo2(1);
+            }
+        """
+        expect = "Undeclared Method: foo2\n"
+        self.assertTrue(TestChecker.test(input, expect, 468))
+
+    # Test 469: Khai báo mảng với kích thước là identifier chưa được khai báo.
+    def test_469(self):
+        input = """
+            func main() {
+                var a [n]int;
+            }
+        """
+        expect = "Undeclared Identifier: n\n"
+        self.assertTrue(TestChecker.test(input, expect, 469))
+
+    # Test 470: Gán literal struct của kiểu khác cho biến struct (incompatible struct types).
+    def test_470(self):
+        input = """
+            type A struct { x int; };
+            type B struct { x int; };
+            func main() {
+                var a A = B{x: 10};
+            }
+        """
+        expect = "Type Mismatch: VarDecl(a,Id(A),StructLiteral(B,[(x,IntLiteral(10))]))\n"
+        self.assertTrue(TestChecker.test(input, expect, 470))
+        
+    def test_471(self):
+        input = """
+      
+        func main() {
+            var a = 1;
+            if (3) {
+                var a = 1;
+            } else if(a > 2) {
+                var a = 2;
+                var a int;
+            }
+            return a;
+        }
+        """
+        expect = "Type Mismatch: IntLiteral(3)\n"
+        self.assertTrue(TestChecker.test(input,expect,471))
+        
+    def test_472(self):
+        input = """
+        type A struct { x int; };
+        type B struct { x int; };
+        func (a A) x(b int) int { return b; }
+        func main() {
+            var a = 1;
+            if (3) {
+                var a = 1;
+            } else if(a > 2) {
+                var a = 2;
+                var a int;
+            }
+            return a;
+        }
+        """
+        expect = "Redeclared Method: x\n"
+        self.assertTrue(TestChecker.test(input,expect,472))
+        
+    def test_473(self):
+        input = """
+       
+        func main() {
+            var a = 1;
+            var x = a + "ste"
+        }
+        """
+        expect = "Type Mismatch: BinaryOp(Id(a),+,StringLiteral(\"ste\"))\n"
+        self.assertTrue(TestChecker.test(input,expect,473))
+        
+        # Test 474: Gọi method với số lượng đối số không khớp định nghĩa.
+    def test_474(self):
+        input = """
+            type A struct { x int; };
+            func (a A) foo(c int, b int) int { return c + b; }
+            func main(){
+                var a A;
+                a.foo(10);
+            }
+        """
+        expect = "Type Mismatch: MethodCall(Id(a),foo,[IntLiteral(10)])\n"
+        self.assertTrue(TestChecker.test(input, expect, 474))
+
+    # Test 475: Gọi hàm với kiểu đối số không phù hợp.
+    def test_475(self):
+        input = """
+            func foo(a int, b float) int { return a ; }
+            func main(){
+                foo(1.0, 2);
+            }
+        """
+        expect = "Type Mismatch: FuncCall(foo,[FloatLiteral(1.0),IntLiteral(2)])\n"
+        self.assertTrue(TestChecker.test(input, expect, 475))
+
+    # Test 476: Gán kết quả hàm (kiểu int) cho biến kiểu string.
+    def test_476(self):
+        input = """
+            func foo() int { return 1; }
+            func main() {
+                var a string = foo();
+            }
+        """
+        expect = "Type Mismatch: VarDecl(a,StringType,FuncCall(foo,[]))\n"
+        self.assertTrue(TestChecker.test(input, expect, 476))
+
+    # Test 477: Tái khai báo kiểu (type) với cùng tên.
+    def test_477(self):
+        input = """
+            type Person struct { name string; };
+            type Person struct { age int; };
+            func main() {}
+        """
+        expect = "Redeclared Type: Person\n"
+        self.assertTrue(TestChecker.test(input, expect, 477))
+
+    # Test 478: Tái khai báo field trong struct.
+    def test_478(self):
+        input = """
+            type Person struct { name string; name int; }
+            func main() {}
+        """
+        expect = "Redeclared Field: name\n"
+        self.assertTrue(TestChecker.test(input, expect, 478))
+
+    # Test 479: Sử dụng identifier chưa được khai báo trong biểu thức số học.
+    def test_479(self):
+        input = """
+            func main() {
+                var a = b + 5;
+            }
+        """
+        expect = "Undeclared Identifier: b\n"
+        self.assertTrue(TestChecker.test(input, expect, 479))
+
+    # Test 480: Sử dụng chỉ số mảng không phải kiểu int (float làm chỉ số).
+    def test_480(self):
+        input = """
+            func main() {
+                var arr [5]int;
+                var x = arr[2.2];
+            }
+        """
+        expect = "Type Mismatch: ArrayCell(Id(arr),[FloatLiteral(2.2)])\n"
+        self.assertTrue(TestChecker.test(input, expect, 480))
+
+    # Test 481: Gán mảng 2 chiều cho biến mảng 1 chiều.
+    def test_481(self):
+        input = """
+            func main(){
+                var a [2]int;
+                var b [2][1]int;
+                a := b;
+            }
+        """
+        expect = "Type Mismatch: Assign(Id(a),Id(b))\n"
+        self.assertTrue(TestChecker.test(input, expect, 481))
+
+    # Test 482: Toán tử "+" với string và int.
+    def test_482(self):
+        input = """
+            func main(){
+                var a = "Hello" + 123;
+            }
+        """
+        expect = "Type Mismatch: BinaryOp(StringLiteral(\"Hello\"),+,IntLiteral(123))\n"
+        self.assertTrue(TestChecker.test(input, expect, 482))
+
+    # Test 483: Gọi hàm trả về void được sử dụng trong biểu thức số học.
+    def test_483(self):
+        input = """
+            func foo(){ }
+            func main(){
+                var a = foo() + 1;
+            }
+        """
+        expect = "Type Mismatch: FuncCall(foo,[])\n"
+        self.assertTrue(TestChecker.test(input, expect, 483))
+
+    # Test 484: Truy cập field trên biến không phải kiểu struct.
+    def test_484(self):
+        input = """
+            func main() {
+                var a = 10;
+                var b = a.name;
+            }
+        """
+        expect = "Type Mismatch: FieldAccess(Id(a),name)\n"
+        self.assertTrue(TestChecker.test(input, expect, 484))
+
+    # Test 485: Gọi method không tồn tại trên kiểu struct.
+    def test_485(self):
+        input = """
+            type A struct { x int; }
+            func (a A) foo() int { return a.x; }
+            func main() {
+                var a A;
+                a.bar();
+            }
+        """
+        expect = "Undeclared Method: bar\n"
+        self.assertTrue(TestChecker.test(input, expect, 485))
+
+    # Test 486: Tái khai báo hàm (function) với cùng tên.
+    def test_486(self):
+        input = """
+            func foo() int { return 1; }
+            func foo() int { return 2; }
+            func main(){}
+        """
+        expect = "Redeclared Function: foo\n"
+        self.assertTrue(TestChecker.test(input, expect, 486))
+
+    # Test 487: Gán giá trị float cho biến kiểu int.
+    def test_487(self):
+        input = """
+            func main(){
+                var a int = 1.0;
+            }
+        """
+        expect = "Type Mismatch: VarDecl(a,IntType,FloatLiteral(1.0))\n"
+        self.assertTrue(TestChecker.test(input, expect, 487))
+
+    # Test 488: Điều kiện trong lệnh if không phải kiểu boolean.
+    def test_488(self):
+        input = """
+            func main(){
+                if (5) {
+                    putInt(1);
+                }
+            }
+        """
+        expect = "Type Mismatch: IntLiteral(5)\n"
+        self.assertTrue(TestChecker.test(input, expect, 488))
+
+    # Test 489: Điều kiện của vòng lặp for không phải kiểu boolean.
+    def test_489(self):
+        input = """
+            func main(){
+                for (1) {
+                    putInt(1);
+                }
+            }
+        """
+        expect = "Type Mismatch: For(IntLiteral(1),Block([FuncCall(putInt,[IntLiteral(1)])]))\n"
+        self.assertTrue(TestChecker.test(input, expect, 489))
+
+    # Test 490: Tái khai báo biến trong block nội bộ với cùng tên với tham số.
+    def test_490(self):
+        input = """
+            func main(x int) {
+                
+                    var x float;
+                    var x int;
+                
+            }
+        """
+        expect = "Redeclared Variable: x\n"
+        self.assertTrue(TestChecker.test(input, expect, 490))
+
+    def test_491(self):
+        input = """
+            func main(){
+                var a = 1;
+                a := 2;
+                const a = 1;
+            }
+        """
+        expect = "Redeclared Constant: a\n"
+        self.assertTrue(TestChecker.test(input, expect, 491))
+
+    # Test 492: Hàm không void có return rỗng.
+    def test_492(self):
+        input = """
+            func foo() int {
+                return;
+            }
+        """
+        expect = "Type Mismatch: Return()\n"
+        self.assertTrue(TestChecker.test(input, expect, 492))
+
+    # Test 493: Hàm void có return kèm giá trị.
+    def test_493(self):
+        input = """
+            func foo() {
+                return 10;
+            }
+        """
+        expect = "Type Mismatch: Return(IntLiteral(10))\n"
+        self.assertTrue(TestChecker.test(input, expect, 493))
+
+    # Test 494: Array literal có kích thước không khớp với kích thước khai báo (sử dụng constant).
+    def test_494(self):
+        input = """
+            func main(){
+                const n = 3;
+                var a [n]int = [2]int{1,2};
+            }
+        """
+        expect = "Type Mismatch: VarDecl(a,ArrayType(IntType,[Id(n)]),ArrayLiteral([IntLiteral(2)],IntType,[IntLiteral(1),IntLiteral(2)]))\n"
+        self.assertTrue(TestChecker.test(input, expect, 494))
+
+    # Test 495: Kích thước mảng được khai báo bằng literal không phải int.
+    def test_495(self):
+        input = """
+            func main(){
+                var a [1]A;
+            }
+        """
+        expect = "Undeclared Identifier: A\n"
+        self.assertTrue(TestChecker.test(input, expect, 495))
+
+    # Test 496: Truy cập field và thực hiện phép toán với kiểu không tương thích.
+    def test_496(self):
+        input = """
+            type Person struct { name string; age int; };
+            func main(){
+                var p = Person{name: "Bob", age: 25};
+                var x = p.age + "1";
+            }
+        """
+        expect = "Type Mismatch: BinaryOp(FieldAccess(Id(p),age),+,StringLiteral(\"1\"))\n"
+        self.assertTrue(TestChecker.test(input, expect, 496))
+
+    # Test 497: Sử dụng kiểu của tham số hàm mà chưa được khai báo.
+    def test_497(self):
+        input = """
+            func foo(a string) int { return 1; }
+            func main() { foo(1); }
+        """
+        expect = "Type Mismatch: FuncCall(foo,[IntLiteral(1)])\n"
+        self.assertTrue(TestChecker.test(input, expect, 497))
+
+    # Test 498: Cài đặt method trong struct không phù hợp với prototype của interface.
+    def test_498(self):
+        input = """
+            type I interface { foo(a int) int; }
+            type A struct { x int; }
+            func (a A) foo(x int) float { return 1.0; }
+            func main(){
+                var i I = A{x:10};
+            }
+        """
+        expect = "Type Mismatch: VarDecl(i,Id(I),StructLiteral(A,[(x,IntLiteral(10))]))\n"
+        self.assertTrue(TestChecker.test(input, expect, 498))
+
+    # Test 499: Vòng lặp for-each sử dụng trên biến không phải kiểu mảng (sử dụng kiểu struct).
+    def test_499(self):
+        input = """
+                type A struct { x int; }
+            func main(){
+                var a A;
+                for i, v := range a {
+                    putInt(1);
+                }
+            }
+        """
+        expect = "Type Mismatch: ForEach(Id(i),Id(v),Id(a),Block([FuncCall(putInt,[IntLiteral(1)])]))\n"
+        self.assertTrue(TestChecker.test(input, expect, 499))
+
+    # Test 500: Tái khai báo method trong cùng một struct.
+    def test_500(self):
+        input = """
+            type A struct { x int; }
+            func (a A) foo() int { return 1; }
+            func (a A) foo() int { return 2; }
+            func main(){}
+        """
+        expect = "Redeclared Method: foo\n"
+        self.assertTrue(TestChecker.test(input, expect, 500))

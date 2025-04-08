@@ -189,11 +189,12 @@ class StaticChecker(BaseVisitor,Utils):
     # varType : Type # None if there is no type
     # varInit : Expr # None if there is no initialization
     def visitVarDecl(self, ast: VarDecl, c):
-        
+    
         if self.lookup(ast.varName, c[0], lambda x: x.name) is not None:
             raise Redeclared(Variable(), ast.varName)
         
         if ast.varInit is None:         # chi khoi tao ko co gia tri
+            self.visit(ast.varType, c)
             
             if type(ast.varType) is Id:
                 found = self.lookup(ast.varType.name, c[-1], lambda x: x.name) # find a symbol in global env
@@ -210,10 +211,11 @@ class StaticChecker(BaseVisitor,Utils):
             if ast.varType is None:                                             # khai bao khong co kieu
                  
                 ast.varType = self.visit(ast.varInit, c)                        # visit literal to get literal type
-                
                 if type(ast.varType) is Symbol:                                 
                     
                     if type(ast.varType.mtype) is MType:                         # Symbol khi la funccall, methcall,
+                        if type(ast.varType.mtype.rettype) is VoidType:
+                            raise TypeMismatch(ast.varInit)
                         c[0] += [Symbol(ast.varName, ast.varType.mtype.rettype)]
                     else:
                         # chua hien thuc value cua fieldaccess                      fieldaccess
@@ -245,7 +247,7 @@ class StaticChecker(BaseVisitor,Utils):
                                 
                                 if ast.varType.name == varInitType.mtype.name:
                                     pass
-                                    print("SType-SType", "Itype-Itype")
+                                    # print("SType-SType", "Itype-Itype")
                                 elif type(varInitType.mtype) is StructType :
                                     # print(found)
                                     if self.CheckIfStructHasAllInterfaceMethods(found, varInitType) is False:
@@ -300,7 +302,7 @@ class StaticChecker(BaseVisitor,Utils):
                         if ast.varType.name == varInitType.name:
                             # print("SType-SType", "Itype-Itype")
                             pass
-                        elif type(varInitType) is StructType:
+                        elif type(found.mtype) is InterfaceType and type(varInitType) is StructType:
                             varInitType = Symbol(ast.varName, varInitType)
                             if self.CheckIfStructHasAllInterfaceMethods(found, varInitType) is False:
                                 raise TypeMismatch(ast)
@@ -309,7 +311,9 @@ class StaticChecker(BaseVisitor,Utils):
                         else:
                             # print("unknowError vardecl: ", found.mtype)
                             raise TypeMismatch(ast)
-                    
+                        
+                        c[0] += [Symbol(ast.varName, found.mtype)]
+                        return c
                     elif type(ast.varType) is not type(varInitType):              # primitive type
                         raise TypeMismatch(ast)
                     
@@ -455,9 +459,13 @@ class StaticChecker(BaseVisitor,Utils):
             if symbol.name == ast.recType.name:                     # kiem tra recType co ton tai trong scope
                 
                 if type(symbol.mtype) is StructType:                
-                    
+                    for ele in symbol.mtype.elements:
+                        if ele[0] == ast.fun.name:
+                            raise Redeclared(Method(), ast.fun.name)
                     o[0] += [Symbol(ast.receiver, symbol.mtype)]    # them receiver vao local scope
-                    
+                    for param in ast.fun.params:
+                        o = self.visit(param, o)
+                    o[0] += [Symbol("MarkDownFunc", MType( ast.fun.params, ast.fun.retType))]
                     o = self.visit(ast.fun.body, o)
                     return c
                 # elif type(recType) is InterfaceType:
@@ -506,8 +514,10 @@ class StaticChecker(BaseVisitor,Utils):
     def visitAssign(self, ast: Assign, c):
         isDeclare = False
         lhs = None
+        carryInterface = None
         if type(ast.lhs) is Id:
             res = self.lookup(ast.lhs.name, c[0], lambda x: x.name)
+            carryInterface = res
             if res is None:
                 lhs = ast.lhs
                 isDeclare = True
@@ -522,6 +532,7 @@ class StaticChecker(BaseVisitor,Utils):
         if type(ast.lhs) is FieldAccess: 
             lhs = self.visit(ast.lhs, c).mtype
             
+            
         rhs = self.visit(ast.rhs, c)        # can be Type ( literal )  || Symbol (expr)
 
         # print("lhs", lhs, "rhs", rhs)
@@ -533,12 +544,39 @@ class StaticChecker(BaseVisitor,Utils):
                 c[0] += [Symbol(lhs.name, rhs)]
             if type(lhs) is not type(rhsType):
                 raise TypeMismatch(ast)
+            else:
+                if type(lhs) is ArrayType:
+                    if type(lhs.eleType) is not type(rhsType.eleType):  # kiem tra kieu cua mang
+                        raise TypeMismatch(ast)
+                    if len(lhs.dimens) != len(rhsType.dimens):          # va so chieu
+                        raise TypeMismatch(ast)
+                    
+                    # for i in range(len(lhs.dimens)):
+                    #     print(lhs.dimens[i])
+                    #     print(rhsType.dimens[i])
+                if type(lhs) is StructType:
+                    
+                    pass
+                return c
         else:
             if type(lhs) is Id and isDeclare:            
                 c[0] += [Symbol(lhs.name, rhs)]
+            elif type(lhs) is InterfaceType and type(rhs) is StructType:
+                found = Symbol(lhs.name, lhs)
+                init = Symbol(rhs.name, rhs)
+                if self.CheckIfStructHasAllInterfaceMethods(found, init) is False:
+                    raise TypeMismatch(ast)
+                for symbol in c[0]:
+                    if symbol.name == carryInterface.name and type(symbol.mtype) == InterfaceType:
+                        symbol.mtype = rhs
+                        break
             elif type(lhs) is not type(rhs):
                 raise TypeMismatch(ast)
             else:
+                if type(lhs) is ArrayType:
+                    pass
+                if type(lhs) is StructType:
+                    pass
                 return c
         return c
     
@@ -575,6 +613,14 @@ class StaticChecker(BaseVisitor,Utils):
     # eleType:Type
     def visitArrayType(self, ast, c):
         # Giả sử ast có thuộc tính: dimens và eleType
+        for dimen in ast.dimens:
+            dimentype = self.visit(dimen, c)
+            if type(dimentype) is Symbol:
+                dimentype = dimentype.mtype
+                if type(dimentype) is not IntType:
+                    raise TypeMismatch(ast)
+            if type(dimentype) is not IntType:
+                raise TypeMismatch(ast)
         return ArrayType(ast.dimens, self.visit(ast.eleType, c))
     
     
@@ -646,7 +692,7 @@ class StaticChecker(BaseVisitor,Utils):
         if type(arrayType) is MType:
             arrayType = arrayType.rettype
         if type(arrayType) is not ArrayType:
-            raise TypeMismatch(ast.arr)
+            raise TypeMismatch(ast)
         o = [[]] + c
         
         if ast.idx.name != '_':
@@ -667,6 +713,8 @@ class StaticChecker(BaseVisitor,Utils):
     
     # Return Statement
     def visitReturn(self, ast, c):
+        
+
         if ast.expr is not None:
             returnType = self.visit(ast.expr, c)
         else:
@@ -676,11 +724,11 @@ class StaticChecker(BaseVisitor,Utils):
             returnType = returnType.mtype
         if type(returnType) is MType:
             returnType = returnType.rettype
-        
         # print("ReturnType", returnType)
         for index in range(len(c) - 1) :        # khong kiem tra global env
             env = c[index]
             for symbol in env:
+                # print("symbol", symbol)
                 if type(symbol.mtype) is MType:
                     if type(symbol.mtype.rettype) is not type(returnType):
                         
@@ -808,12 +856,12 @@ class StaticChecker(BaseVisitor,Utils):
             if isinstance(bodyType, IntType) or isinstance(bodyType, FloatType):
                 return bodyType
             else:
-                raise TypeMismatch(ast.body)
+                raise TypeMismatch(ast)
         elif ast.op == '!':
             if isinstance(bodyType, BoolType):
                 return BoolType()
             else:
-                raise TypeMismatch(ast.body)
+                raise TypeMismatch(ast)
         return None
     
     
@@ -843,7 +891,7 @@ class StaticChecker(BaseVisitor,Utils):
                 raise TypeMismatch(ast)
         else:
             pass
-            print("FieldAcess unknowError:", receiver)
+            # print("FieldAcess unknowError:", receiver)
         return c
     
     
@@ -931,9 +979,11 @@ class StaticChecker(BaseVisitor,Utils):
                 methodFun = MType(found.params, found.retType)
                 # print("Method:", methodFun)
                 return Symbol(ast.metName, methodFun)
+            else:
+                raise TypeMismatch(ast)
         else:
+            raise TypeMismatch(ast)
             pass
-            print("MethCall unknowError:", receiver)
         return c
     
     # Literals
